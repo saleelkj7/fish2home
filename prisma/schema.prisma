@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  CLEANING
+  PACKED
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING_ADVANCE
+  ADVANCE_VERIFIED
+  FULLY_PAID
+}
+
+model User {
+  id               Int       @id @default(autoincrement())
+  firstName        String
+  lastName         String
+  email            String    @unique
+  mobile           String
+  password         String
+  role             Role      @default(CUSTOMER)
+  isActive         Boolean   @default(false)
+  isEmailVerified  Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  addresses        Address[]
+  orders           Order[]
+  wishlist         Wishlist[]
+  verificationToken String?
+}
+
+model Category {
+  id     Int    @id @default(autoincrement())
+  name   String @unique
+  fishes Fish[]
+}
+
+model Fish {
+  id             Int         @id @default(autoincrement())
+  name           String
+  scientificName String?
+  price          Float
+  stock          Int
+  description    String?
+  freshness      String?
+  image          String      @default("/default-fish.jpg")
+  categoryId     Int
+  category       Category    @relation(fields: [categoryId], references: [id])
+  orderItems     OrderItem[]
+  wishlists      Wishlist[]
+}
+
+model Address {
+  id           Int     @id @default(autoincrement())
+  userId       Int
+  user         User    @relation(fields: [userId], references: [id])
+  name         String
+  mobile       String
+  address      String
+  landmark     String?
+  pincode      String
+  instructions String?
+  isDefault    Boolean @default(false)
+  orders       Order[]
+}
+
+model DeliverySlot {
+  id            Int      @id @default(autoincrement())
+  date          DateTime @db.Date
+  startTime     Int      
+  endTime       Int      
+  maxOrders     Int      @default(10)
+  currentOrders Int      @default(0)
+  orders        Order[]
+  @@unique([date, startTime])
+}
+
+model Order {
+  id              Int           @id @default(autoincrement())
+  orderNumber     String        @unique
+  userId          Int
+  user            User          @relation(fields: [userId], references: [id])
+  addressId       Int
+  address         Address       @relation(fields: [addressId], references: [id])
+  deliverySlotId  Int
+  deliverySlot    DeliverySlot  @relation(fields: [deliverySlotId], references: [id])
+  totalAmount     Float
+  advanceAmount   Float
+  balanceAmount   Float
+  paymentStatus   PaymentStatus @default(PENDING_ADVANCE)
+  orderStatus     OrderStatus   @default(PENDING)
+  upiRefNumber    String?
+  invoiceUrl      String?
+  createdAt       DateTime      @default(now())
+  items           OrderItem[]
+}
+
+model OrderItem {
+  id       Int    @id @default(autoincrement())
+  orderId  Int
+  order    Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  fishId   Int
+  fish     Fish   @relation(fields: [fishId], references: [id])
+  quantity Int
+  price    Float
+}
+
+model Wishlist {
+  id     Int  @id @default(autoincrement())
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fishId Int
+  fish   Fish @relation(fields: [fishId], references: [id], onDelete: Cascade)
+  @@unique([userId, fishId])
+}
+
+model Coupon {
+  id                 Int     @id @default(autoincrement())
+  code               String  @unique
+  discountPercentage Float
+  isActive           Boolean @default(true)
+}

@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Environment secrets (NEVER push these!)
+.env
+prisma/.env
+server/.env
+
+# Local database
+*.db
+
+# Build outputs & logs
+client/dist/
+dist/
+*.log
+.DS_Store
+
+# Generated files (kept local)
+invoices/*.pdf
