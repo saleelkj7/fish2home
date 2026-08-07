@@ -64,7 +64,7 @@ const Orders = () => {
                                 </div>
                                 <div className="text-right">
                                     <p className="font-bold text-lg">Total: ₹{order.totalAmount}</p>
-                                    {order.invoiceUrl && <a href={`http://localhost:5000${order.invoiceUrl}`} target="_blank" rel="noreferrer" className="text-teal-600 text-sm hover:underline">Download Invoice</a>}
+                                    {order.invoiceUrl && <a href={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${order.invoiceUrl}`} target="_blank" rel="noreferrer" className="text-teal-600 text-sm hover:underline">Download Invoice</a>}
                                 </div>
                             </div>
                         </div>

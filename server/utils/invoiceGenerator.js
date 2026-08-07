@@ -1,11 +1,17 @@
 import PDFDocument from 'pdfkit';
 import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const invoicesDir = path.join(__dirname, '..', '..', 'invoices');
 
 export const generateInvoice = async (order) => {
     return new Promise((resolve, reject) => {
+        fs.mkdirSync(invoicesDir, { recursive: true });
         const doc = new PDFDocument({ margin: 50 });
         const fileName = `F2H-INV-${order.orderNumber}.pdf`;
-        const filePath = `../invoices/${fileName}`;
+        const filePath = path.join(invoicesDir, fileName);
         const stream = fs.createWriteStream(filePath);
 
         doc.pipe(stream);
