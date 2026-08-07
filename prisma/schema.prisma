@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  output   = "../server/node_modules/@prisma/client"
 }
 
 datasource db {
@@ -137,9 +138,4 @@ model Coupon {
   code               String  @unique
   discountPercentage Float
   isActive           Boolean @default(true)
-}
-
-generator client {
-  provider = "prisma-client-js"
-  output   = "../server/node_modules/@prisma/client"
 }
