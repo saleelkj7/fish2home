@@ -21,10 +21,11 @@ const Checkout = () => {
     const [orderData, setOrderData] = useState(null);
     const [upiRef, setUpiRef] = useState('');
 
+    // No same-day delivery — fish is sourced fresh each morning, so the
+    // earliest a customer can choose is tomorrow.
     const dates = [
-        { label: 'Today', value: new Date().toISOString().split('T')[0] },
         { label: 'Tomorrow', value: new Date(Date.now() + 86400000).toISOString().split('T')[0] },
-        { label: 'Day After', value: new Date(Date.now() + 2 * 86400000).toISOString().split('T')[0] }
+        { label: 'Day After Tomorrow', value: new Date(Date.now() + 2 * 86400000).toISOString().split('T')[0] }
     ];
 
     useEffect(() => { if (!isAuthenticated) navigate('/login'); }, [isAuthenticated, navigate]);
@@ -117,7 +118,7 @@ const Checkout = () => {
                         <h2 className="text-2xl font-bold mb-4 text-gray-800">Complete Advance Payment</h2>
                         <p className="text-gray-600 mb-6">Scan the QR code with any UPI app to pay 25% advance.</p>
                         <div className="bg-gray-100 p-4 rounded-lg mb-4 inline-block">
-                            <QRCodeSVG value={`upi://pay?pa=${orderData.upiId}&pn=Fish2Home&am=${orderData.advanceAmount}&cu=INR&tn=${orderData.order.orderNumber}`} size={200} />
+                            <QRCodeSVG value={`upi://pay?pa=${orderData.upiId}&pn=Fishtokri&am=${orderData.advanceAmount}&cu=INR&tn=${orderData.order.orderNumber}`} size={200} />
                         </div>
                         <div className="mb-6">
                             <p className="text-sm text-gray-500">UPI ID</p>

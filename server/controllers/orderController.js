@@ -28,7 +28,7 @@ export const createOrder = async (req, res) => {
 
     const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
     const count = await prisma.order.count() + 1;
-    const orderNumber = `F2H-${dateStr}-${count.toString().padStart(5, '0')}`;
+    const orderNumber = `FTK-${dateStr}-${count.toString().padStart(5, '0')}`;
 
     const address = await prisma.address.create({ data: { ...addressData, userId } });
 
@@ -49,7 +49,7 @@ export const createOrder = async (req, res) => {
     const invoiceFileName = await generateInvoice(order);
     await prisma.order.update({ where: { id: order.id }, data: { invoiceUrl: `/invoices/${invoiceFileName}` } });
 
-    const upiString = `upi://pay?pa=vaibhav@icici&pn=Fish2Home&am=${advanceAmount}&cu=INR&tn=${orderNumber}`;
+    const upiString = `upi://pay?pa=vaibhav@icici&pn=Fishtokri&am=${advanceAmount}&cu=INR&tn=${orderNumber}`;
     const qrCodeDataUrl = await QRCode.toDataURL(upiString);
 
     res.json({ order, invoiceUrl: `/invoices/${invoiceFileName}`, upiQr: qrCodeDataUrl, upiId: 'vaibhav@icici', advanceAmount });

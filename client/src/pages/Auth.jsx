@@ -1,5 +1,5 @@
 import { useState, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
 
@@ -29,7 +29,7 @@ const Auth = () => {
 
     return (
         <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
-            <h2 className="text-2xl font-bold mb-6 text-center">{isLogin ? 'Login to Fish2Home' : 'Create Account'}</h2>
+            <h2 className="text-2xl font-bold mb-6 text-center">{isLogin ? 'Login to Fishtokri' : 'Create Account'}</h2>
             {msg && <p className={`p-3 mb-4 rounded text-center ${msg.includes('successful') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{msg}</p>}
             <form onSubmit={handleSubmit} className="space-y-4">
                 {!isLogin && (
@@ -41,6 +41,11 @@ const Auth = () => {
                 <input type="email" placeholder="Email" required value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="p-2 border rounded w-full" />
                 {!isLogin && <input type="text" placeholder="Mobile Number" required value={form.mobile} onChange={e => setForm({...form, mobile: e.target.value})} className="p-2 border rounded w-full" />}
                 <input type="password" placeholder="Password" required value={form.password} onChange={e => setForm({...form, password: e.target.value})} className="p-2 border rounded w-full" />
+                {isLogin && (
+                    <p className="text-right -mt-2">
+                        <Link to="/forgot-password" className="text-xs text-teal-600 font-semibold hover:underline">Forgot password?</Link>
+                    </p>
+                )}
                 <button type="submit" className="w-full bg-slate-900 text-white py-2 rounded hover:bg-teal-600 font-bold">{isLogin ? 'Login' : 'Register'}</button>
             </form>
             <p className="text-center mt-4 text-sm text-slate-600">

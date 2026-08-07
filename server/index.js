@@ -40,6 +40,7 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use('/invoices', express.static(path.join(__dirname, '..', 'invoices')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100 });
 app.use(limiter);
@@ -50,4 +51,4 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/slots', slotRoutes);
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🐟 Fish2Home Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`🐟 Fishtokri Server running on port ${PORT}`));

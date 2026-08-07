@@ -10,12 +10,12 @@ export const generateInvoice = async (order) => {
     return new Promise((resolve, reject) => {
         fs.mkdirSync(invoicesDir, { recursive: true });
         const doc = new PDFDocument({ margin: 50 });
-        const fileName = `F2H-INV-${order.orderNumber}.pdf`;
+        const fileName = `FTK-INV-${order.orderNumber}.pdf`;
         const filePath = path.join(invoicesDir, fileName);
         const stream = fs.createWriteStream(filePath);
 
         doc.pipe(stream);
-        doc.fontSize(25).text('Fish2Home', { align: 'right' });
+        doc.fontSize(25).text('Fishtokri', { align: 'right' });
         doc.fontSize(10).text('Fresh Fish Delivered to Your Doorstep', { align: 'right' });
         doc.moveDown(2);
         doc.fontSize(18).text('INVOICE', { align: 'left' });

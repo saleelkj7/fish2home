@@ -13,7 +13,7 @@ router.get('/all', protect, admin, async (req, res) => {
     const { PrismaClient } = await import('@prisma/client');
     const prisma = new PrismaClient();
     const orders = await prisma.order.findMany({
-        include: { user: true, address: true, items: { include: { fish: true } } },
+        include: { user: true, address: true, deliverySlot: true, items: { include: { fish: true } } },
         orderBy: { createdAt: 'desc' }
     });
     res.json(orders);

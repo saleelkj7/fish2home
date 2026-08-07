@@ -47,7 +47,7 @@ const Home = () => {
                         Fresh fish from the coast, cleaned exactly how you like it.
                     </h1>
                     <p className="text-slate-300 text-base md:text-lg max-w-xl mb-8 leading-relaxed">
-                        Bangda, Surmai, Pomfret, Bombil and live crab — sourced daily from Navi Mumbai's boats and delivered to your kitchen in same-day slots.
+                        Bangda, Surmai, Pomfret, Bombil and live crab — sourced daily from Navi Mumbai's boats and delivered to your kitchen the next day, cleaned exactly how you like it.
                     </p>
                     <div className="flex flex-wrap gap-4">
                         <a href="#delivery" className="bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold px-7 py-3.5 rounded-full transition-all shadow-lg shadow-teal-500/25">Check delivery in your area</a>
@@ -61,7 +61,7 @@ const Home = () => {
                 <div className="container mx-auto px-6 py-8 grid grid-cols-1 md:grid-cols-3 gap-8">
                     <div className="flex items-start gap-4">
                         <span className="text-3xl">🕒</span>
-                        <div><h3 className="font-bold text-slate-900">Same-day slots</h3><p className="text-sm text-slate-500 mt-1">7–10 AM, 10 AM–1 PM, 1–4 PM, 4–7 PM</p></div>
+                        <div><h3 className="font-bold text-slate-900">Next-day delivery slots</h3><p className="text-sm text-slate-500 mt-1">7–10 AM, 10 AM–1 PM, 1–4 PM, 4–7 PM</p></div>
                     </div>
                     <div className="flex items-start gap-4">
                         <span className="text-3xl">🧊</span>

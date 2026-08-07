@@ -2,7 +2,7 @@ const Footer = () => (
     <footer className="bg-slate-950 text-slate-300 mt-16">
         <div className="container mx-auto px-6 py-12 grid grid-cols-1 md:grid-cols-4 gap-10">
             <div>
-                <h3 className="text-white text-lg font-extrabold mb-3">Fish<span className="text-teal-400">2</span>Home</h3>
+                <img src="/images/logo.png" alt="Fishtokri" className="h-12 w-auto mb-3 bg-white rounded-lg p-1" />
                 <p className="text-sm text-slate-400">Fresh fish from the coast, cleaned exactly how you like it. Sourced daily from Navi Mumbai's boats.</p>
             </div>
             <div>
@@ -33,7 +33,7 @@ const Footer = () => (
         </div>
         <div className="border-t border-slate-800">
             <div className="container mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-2 text-xs text-slate-500">
-                <span>© 2026 Fish2Home. All rights reserved.</span>
+                <span>© 2026 Fishtokri. All rights reserved.</span>
                 <span className="flex gap-4">
                     <a href="#" className="hover:text-teal-400">About Us</a>
                     <a href="#" className="hover:text-teal-400">FAQ</a>
