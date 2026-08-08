@@ -22,6 +22,10 @@ import slotRoutes from './routes/slots.js';
 
 const app = express();
 
+// Render (and most PaaS platforms) sit behind a reverse proxy that sets
+// X-Forwarded-For. Without this, express-rate-limit throws on every request.
+app.set('trust proxy', 1);
+
 app.use(helmet({ crossOriginResourcePolicy: false }));
 
 // Comma-separated list of allowed frontend origins, e.g.
