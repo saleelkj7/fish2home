@@ -12,7 +12,7 @@ const Navbar = () => {
         <nav className="bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40">
             <div className="container mx-auto px-6 h-16 flex justify-between items-center">
                 <Link to="/" className="flex items-center gap-2">
-                    <img src="/images/logo.png" alt="Fishtokri" className="h-11 w-auto" />
+                    <img src="/images/logo.png" alt="Fishtokri" className="h-14 w-auto py-1" />
                 </Link>
                 <div className="flex items-center gap-6 text-sm font-semibold text-slate-600">
                     <Link to="/" className="hover:text-teal-700 hidden md:block">Home</Link>
