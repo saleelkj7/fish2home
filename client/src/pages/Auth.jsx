@@ -7,11 +7,14 @@ const Auth = () => {
     const [isLogin, setIsLogin] = useState(true);
     const [form, setForm] = useState({ firstName: '', lastName: '', email: '', mobile: '', password: '' });
     const [msg, setMsg] = useState('');
+    const [loading, setLoading] = useState(false);
     const { login } = useContext(AuthContext);
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
-        e.preventDefault(); setMsg('');
+        e.preventDefault();
+        if (loading) return; // guard against double-submit even if the click somehow slips through
+        setMsg(''); setLoading(true);
         try {
             if (isLogin) {
                 const res = await axios.post('/api/auth/login', { email: form.email, password: form.password });
@@ -24,12 +27,17 @@ const Auth = () => {
                 setMsg(res.data.message);
                 setTimeout(() => setIsLogin(true), 2500);
             }
-        } catch (err) { setMsg(err.response?.data?.error || 'An error occurred'); }
+        } catch (err) {
+            setMsg(err.response?.data?.error || 'An error occurred');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
         <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
-            <h2 className="text-2xl font-bold mb-6 text-center">{isLogin ? 'Login to Fishtokri' : 'Create Account'}</h2>
+            <h2 className="text-2xl font-bold mb-2 text-center">{isLogin ? 'Login to Fishtokri' : 'Create Account'}</h2>
+            <p className="text-xs text-slate-400 text-center mb-4">First request of the day may take up to a minute to respond — please wait rather than clicking again.</p>
             {msg && <p className={`p-3 mb-4 rounded text-center ${msg.includes('successful') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{msg}</p>}
             <form onSubmit={handleSubmit} className="space-y-4">
                 {!isLogin && (
@@ -46,7 +54,9 @@ const Auth = () => {
                         <Link to="/forgot-password" className="text-xs text-teal-600 font-semibold hover:underline">Forgot password?</Link>
                     </p>
                 )}
-                <button type="submit" className="w-full bg-slate-900 text-white py-2 rounded hover:bg-teal-600 font-bold">{isLogin ? 'Login' : 'Register'}</button>
+                <button type="submit" disabled={loading} className="w-full bg-slate-900 text-white py-2 rounded hover:bg-teal-600 font-bold disabled:opacity-50 disabled:cursor-not-allowed">
+                    {loading ? (isLogin ? 'Logging in...' : 'Registering...') : (isLogin ? 'Login' : 'Register')}
+                </button>
             </form>
             <p className="text-center mt-4 text-sm text-slate-600">
                 {isLogin ? "Don't have an account?" : "Already have an account?"}
