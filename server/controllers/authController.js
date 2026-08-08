@@ -70,7 +70,13 @@ export const resetPassword = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     await prisma.user.update({
         where: { id: user.id },
-        data: { password: hashedPassword, resetToken: null, resetTokenExpiry: null }
+        data: {
+            password: hashedPassword,
+            resetToken: null,
+            resetTokenExpiry: null,
+            isEmailVerified: true, // successfully clicking the emailed link already proves ownership
+            isActive: true
+        }
     });
     res.json({ message: 'Password reset successful. You can now log in.' });
 };
