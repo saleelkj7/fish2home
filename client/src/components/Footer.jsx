@@ -26,8 +26,8 @@ const Footer = () => (
             <div>
                 <h4 className="text-white font-bold mb-3 text-sm uppercase tracking-wider">Contact Us</h4>
                 <ul className="space-y-2 text-sm text-slate-400">
-                    <li>📞 9967794964</li>
-                    <li>✉️ skannanj7@gmail.com</li>
+                    <li>📞 9004668229</li>
+                    <li>✉️ vaibhav@fishtokri.co.in</li>
                 </ul>
             </div>
         </div>
