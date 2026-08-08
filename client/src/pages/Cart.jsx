@@ -32,8 +32,7 @@ const Cart = () => {
                 <div className="flex justify-between mb-2"><span>GST (5%):</span><span>₹{totals.gst.toFixed(2)}</span></div>
                 <div className="flex justify-between text-xl font-bold border-t pt-2 mb-4"><span>Total:</span><span>₹{totals.total.toFixed(2)}</span></div>
                 <div className="bg-white p-4 rounded mb-4 border border-blue-200">
-                    <p className="text-sm text-gray-600">Advance Payment Required (25%): <span className="font-bold text-blue-800">₹{totals.advance.toFixed(2)}</span></p>
-                    <p className="text-sm text-gray-600">Balance (Cash/UPI on Delivery): <span className="font-bold">₹{totals.balance.toFixed(2)}</span></p>
+                    <p className="text-sm text-gray-700">Pay the full amount via <span className="font-bold">Cash or UPI</span> when your order is delivered.</p>
                 </div>
                 <Link to="/checkout" className="block w-full bg-green-600 text-white py-3 rounded-lg font-bold text-center hover:bg-green-700">Proceed to Checkout</Link>
             </div>

@@ -31,7 +31,7 @@ export const CartProvider = ({ children }) => {
         const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
         const gst = subtotal * 0.05;
         const total = subtotal + gst;
-        return { subtotal, gst, total, advance: total * 0.25, balance: total * 0.75 };
+        return { subtotal, gst, total, advance: 0, balance: total };
     };
 
     return (

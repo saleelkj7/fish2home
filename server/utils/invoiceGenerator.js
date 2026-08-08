@@ -48,8 +48,7 @@ export const generateInvoice = async (order) => {
         doc.text(`GST (5%): ₹${gst.toFixed(2)}`);
         doc.moveDown();
         doc.fontSize(12).text(`Grand Total: ₹${order.totalAmount}`, { bold: true });
-        doc.text(`Advance Paid (25%): ₹${order.advanceAmount}`, { color: 'green' });
-        doc.text(`Balance Due (75%): ₹${order.balanceAmount}`, { color: 'red' });
+        doc.text(`Amount Due (Cash/UPI at Delivery): ₹${order.balanceAmount}`, { color: 'red' });
 
         doc.end();
         stream.on('finish', () => resolve(fileName));

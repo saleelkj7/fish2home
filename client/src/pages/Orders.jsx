@@ -1,22 +1,26 @@
 import { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { QRCodeSVG } from 'qrcode.react';
 import { AuthContext } from '../context/AuthContext';
+
+const UPI_ID = 'vaibhav@icici';
 
 const Orders = () => {
     const [orders, setOrders] = useState([]);
+    const [qrOpenFor, setQrOpenFor] = useState(null);
     const { isAuthenticated } = useContext(AuthContext);
     const navigate = useNavigate();
 
     useEffect(() => {
         if (!isAuthenticated) { navigate('/login'); return; }
-        
+
         const fetchOrders = () => {
             axios.get('/api/orders/my-orders').then(res => setOrders(res.data));
         };
-        
+
         fetchOrders();
-        
+
         // Auto-poll every 5 seconds to get real-time status updates from Admin
         const interval = setInterval(fetchOrders, 5000);
         return () => clearInterval(interval);
@@ -31,10 +35,12 @@ const Orders = () => {
                     Auto-updating status...
                 </span>
             </div>
-            
+
             {orders.length === 0 ? <p className="text-center text-gray-500">You haven't placed any orders yet.</p> : (
                 <div className="space-y-4">
-                    {orders.map(order => (
+                    {orders.map(order => {
+                        const isPaid = order.paymentStatus === 'FULLY_PAID';
+                        return (
                         <div key={order.id} className="bg-white p-6 rounded-lg shadow-md border border-gray-100">
                             <div className="flex justify-between items-start mb-4">
                                 <div>
@@ -43,8 +49,8 @@ const Orders = () => {
                                     <p className="text-sm text-gray-600 mt-1">Delivery: {new Date(order.deliverySlot.date).toLocaleDateString()} ({order.deliverySlot.startTime}:00 - {order.deliverySlot.endTime}:00)</p>
                                 </div>
                                 <span className={`px-3 py-1 rounded-full text-xs font-bold
-                                    ${order.orderStatus === 'DELIVERED' ? 'bg-green-100 text-green-800' : 
-                                      order.orderStatus === 'CANCELLED' ? 'bg-red-100 text-red-800' : 
+                                    ${order.orderStatus === 'DELIVERED' ? 'bg-green-100 text-green-800' :
+                                      order.orderStatus === 'CANCELLED' ? 'bg-red-100 text-red-800' :
                                       'bg-amber-100 text-amber-800'}`}>
                                     {order.orderStatus.replace('_', ' ')}
                                 </span>
@@ -59,16 +65,33 @@ const Orders = () => {
                             </div>
                             <div className="flex justify-between items-center mt-4 pt-4 border-t">
                                 <div className="text-sm">
-                                    <p className="text-green-600 font-bold">Advance Paid: ₹{order.advanceAmount}</p>
-                                    <p className="text-red-600 font-bold">Balance Due: ₹{order.balanceAmount}</p>
+                                    {isPaid ? (
+                                        <p className="text-green-600 font-bold">✓ Paid</p>
+                                    ) : (
+                                        <>
+                                            <p className="text-amber-600 font-bold">Due at Delivery (Cash or UPI): ₹{order.balanceAmount}</p>
+                                            <button onClick={() => setQrOpenFor(qrOpenFor === order.id ? null : order.id)} className="text-teal-600 text-xs font-semibold hover:underline mt-1">
+                                                {qrOpenFor === order.id ? 'Hide UPI QR' : 'Pay via UPI now'}
+                                            </button>
+                                        </>
+                                    )}
                                 </div>
                                 <div className="text-right">
                                     <p className="font-bold text-lg">Total: ₹{order.totalAmount}</p>
                                     {order.invoiceUrl && <a href={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${order.invoiceUrl}`} target="_blank" rel="noreferrer" className="text-teal-600 text-sm hover:underline">Download Invoice</a>}
                                 </div>
                             </div>
+                            {qrOpenFor === order.id && !isPaid && (
+                                <div className="mt-4 pt-4 border-t text-center">
+                                    <div className="bg-gray-50 p-4 rounded-lg inline-block">
+                                        <QRCodeSVG value={`upi://pay?pa=${UPI_ID}&pn=Fishtokri&am=${order.totalAmount}&cu=INR&tn=${order.orderNumber}`} size={180} />
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-2">Scan with any UPI app · {UPI_ID}</p>
+                                </div>
+                            )}
                         </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
         </div>

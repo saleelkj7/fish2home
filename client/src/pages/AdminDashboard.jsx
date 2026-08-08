@@ -70,6 +70,15 @@ const OrdersTab = () => {
         }
     };
 
+    const markPaid = async (id) => {
+        try {
+            await axios.put(`/api/orders/${id}/payment-status`, { paymentStatus: 'FULLY_PAID' });
+            setOrders(orders.map(o => o.id === id ? { ...o, paymentStatus: 'FULLY_PAID' } : o));
+        } catch (err) {
+            alert('Failed to update payment status');
+        }
+    };
+
     const filteredOrders = orders.filter(o => {
         if (dateFilter === 'ALL') return true;
         const slotDate = o.deliverySlot ? dateOnly(o.deliverySlot.date) : null;
@@ -120,6 +129,7 @@ const OrdersTab = () => {
                                 <th className="p-4">Customer</th>
                                 <th className="p-4">Delivery Date</th>
                                 <th className="p-4">Amount</th>
+                                <th className="p-4">Payment</th>
                                 <th className="p-4">Current Status</th>
                                 <th className="p-4">Update Status</th>
                             </tr>
@@ -136,6 +146,15 @@ const OrdersTab = () => {
                                         {order.deliverySlot ? new Date(order.deliverySlot.date).toLocaleDateString('en-IN') : '—'}
                                     </td>
                                     <td className="p-4 font-bold">₹{order.totalAmount}</td>
+                                    <td className="p-4">
+                                        {order.paymentStatus === 'FULLY_PAID' ? (
+                                            <span className="px-2 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800">Paid</span>
+                                        ) : (
+                                            <button onClick={() => markPaid(order.id)} className="px-2 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 hover:bg-amber-200 transition-colors">
+                                                Mark Paid (Cash/UPI)
+                                            </button>
+                                        )}
+                                    </td>
                                     <td className="p-4">
                                         <span className={`px-2 py-1 rounded-full text-xs font-bold
                                             ${order.orderStatus === 'DELIVERED' ? 'bg-green-100 text-green-800' :
@@ -165,7 +184,7 @@ const OrdersTab = () => {
                                 </tr>
                             ))}
                             {filteredOrders.length === 0 && (
-                                <tr><td colSpan={6} className="p-8 text-center text-slate-400">No orders for this filter.</td></tr>
+                                <tr><td colSpan={7} className="p-8 text-center text-slate-400">No orders for this filter.</td></tr>
                             )}
                         </tbody>
                     </table>
@@ -355,6 +374,7 @@ const UsersTab = () => {
     const [form, setForm] = useState(emptyUserForm);
     const [msg, setMsg] = useState('');
     const [saving, setSaving] = useState(false);
+    const [editingUser, setEditingUser] = useState(null); // { id, firstName, lastName, email, mobile }
 
     const load = () => axios.get('/api/auth/users').then(res => setUsers(res.data));
     useEffect(load, []);
@@ -381,6 +401,37 @@ const UsersTab = () => {
             await axios.put(`/api/auth/users/${u.id}/role`, { role: newRole });
             load();
         } catch { alert('Failed to update role'); }
+    };
+
+    const toggleActive = async (u) => {
+        const nextActive = !u.isActive;
+        if (!confirm(`${nextActive ? 'Reactivate' : 'Deactivate'} ${u.email}?`)) return;
+        try {
+            await axios.put(`/api/auth/users/${u.id}/active`, { isActive: nextActive });
+            load();
+        } catch { alert('Failed to update account status'); }
+    };
+
+    const deleteUserRow = async (u) => {
+        if (!confirm(`Permanently delete ${u.email}? This only works if they have no order history.`)) return;
+        try {
+            await axios.delete(`/api/auth/users/${u.id}`);
+            load();
+        } catch (err) {
+            alert(err.response?.data?.error || 'Failed to delete user');
+        }
+    };
+
+    const startEdit = (u) => setEditingUser({ id: u.id, firstName: u.firstName, lastName: u.lastName, email: u.email, mobile: u.mobile });
+
+    const saveEdit = async () => {
+        try {
+            await axios.put(`/api/auth/users/${editingUser.id}`, editingUser);
+            setEditingUser(null);
+            load();
+        } catch (err) {
+            alert(err.response?.data?.error || 'Failed to save changes');
+        }
     };
 
     return (
@@ -417,25 +468,59 @@ const UsersTab = () => {
                                 <th className="p-4">Email</th>
                                 <th className="p-4">Mobile</th>
                                 <th className="p-4">Role</th>
-                                <th className="p-4">Verified</th>
+                                <th className="p-4">Status</th>
                                 <th className="p-4">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-200">
                             {users.map(u => (
                                 <tr key={u.id} className="hover:bg-slate-50">
-                                    <td className="p-4 font-bold text-slate-900">{u.firstName} {u.lastName}</td>
-                                    <td className="p-4">{u.email}</td>
-                                    <td className="p-4">{u.mobile}</td>
-                                    <td className="p-4">
-                                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${u.role === 'ADMIN' ? 'bg-purple-100 text-purple-800' : 'bg-slate-100 text-slate-700'}`}>{u.role}</span>
-                                    </td>
-                                    <td className="p-4">{u.isEmailVerified ? 'Yes' : 'No'}</td>
-                                    <td className="p-4">
-                                        <button onClick={() => toggleRole(u)} className="text-teal-600 font-bold hover:underline text-xs">
-                                            {u.role === 'ADMIN' ? 'Demote to Customer' : 'Promote to Admin'}
-                                        </button>
-                                    </td>
+                                    {editingUser?.id === u.id ? (
+                                        <>
+                                            <td className="p-4">
+                                                <div className="flex gap-1">
+                                                    <input value={editingUser.firstName} onChange={e => setEditingUser({ ...editingUser, firstName: e.target.value })} className="w-20 p-1 border rounded text-xs" placeholder="First" />
+                                                    <input value={editingUser.lastName} onChange={e => setEditingUser({ ...editingUser, lastName: e.target.value })} className="w-20 p-1 border rounded text-xs" placeholder="Last" />
+                                                </div>
+                                            </td>
+                                            <td className="p-4"><input value={editingUser.email} onChange={e => setEditingUser({ ...editingUser, email: e.target.value })} className="w-full p-1 border rounded text-xs" /></td>
+                                            <td className="p-4"><input value={editingUser.mobile} onChange={e => setEditingUser({ ...editingUser, mobile: e.target.value })} className="w-full p-1 border rounded text-xs" /></td>
+                                            <td className="p-4">
+                                                <span className={`px-2 py-1 rounded-full text-xs font-bold ${u.role === 'ADMIN' ? 'bg-purple-100 text-purple-800' : 'bg-slate-100 text-slate-700'}`}>{u.role}</span>
+                                            </td>
+                                            <td className="p-4">{u.isActive ? 'Active' : 'Deactivated'}</td>
+                                            <td className="p-4 flex gap-2">
+                                                <button onClick={saveEdit} className="text-teal-600 font-bold hover:underline text-xs">Save</button>
+                                                <button onClick={() => setEditingUser(null)} className="text-slate-500 font-bold hover:underline text-xs">Cancel</button>
+                                            </td>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <td className="p-4 font-bold text-slate-900">{u.firstName} {u.lastName}</td>
+                                            <td className="p-4">{u.email}</td>
+                                            <td className="p-4">{u.mobile}</td>
+                                            <td className="p-4">
+                                                <span className={`px-2 py-1 rounded-full text-xs font-bold ${u.role === 'ADMIN' ? 'bg-purple-100 text-purple-800' : 'bg-slate-100 text-slate-700'}`}>{u.role}</span>
+                                            </td>
+                                            <td className="p-4">
+                                                <span className={`px-2 py-1 rounded-full text-xs font-bold ${u.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                    {u.isActive ? 'Active' : 'Deactivated'}
+                                                </span>
+                                            </td>
+                                            <td className="p-4">
+                                                <div className="flex flex-wrap gap-2">
+                                                    <button onClick={() => startEdit(u)} className="text-teal-600 font-bold hover:underline text-xs">Edit</button>
+                                                    <button onClick={() => toggleRole(u)} className="text-purple-600 font-bold hover:underline text-xs">
+                                                        {u.role === 'ADMIN' ? 'Demote' : 'Promote'}
+                                                    </button>
+                                                    <button onClick={() => toggleActive(u)} className="text-amber-600 font-bold hover:underline text-xs">
+                                                        {u.isActive ? 'Deactivate' : 'Reactivate'}
+                                                    </button>
+                                                    <button onClick={() => deleteUserRow(u)} className="text-red-600 font-bold hover:underline text-xs">Delete</button>
+                                                </div>
+                                            </td>
+                                        </>
+                                    )}
                                 </tr>
                             ))}
                         </tbody>

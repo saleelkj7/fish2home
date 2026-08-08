@@ -1,7 +1,6 @@
 import { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { QRCodeSVG } from 'qrcode.react';
 import { CartContext } from '../context/CartContext';
 import { AuthContext } from '../context/AuthContext';
 
@@ -11,15 +10,13 @@ const Checkout = () => {
     const { getTotals, cart, clearCart } = useContext(CartContext);
     const { isAuthenticated } = useContext(AuthContext);
     const navigate = useNavigate();
-    
+
     const [address, setAddress] = useState({ name: '', mobile: '', address: '', landmark: '', pincode: '', instructions: '' });
     const [pincodeError, setPincodeError] = useState('');
     const [selectedDate, setSelectedDate] = useState('');
     const [slots, setSlots] = useState([]);
     const [selectedSlot, setSelectedSlot] = useState(null);
-    const [showPayment, setShowPayment] = useState(false);
-    const [orderData, setOrderData] = useState(null);
-    const [upiRef, setUpiRef] = useState('');
+    const [placing, setPlacing] = useState(false);
 
     // No same-day delivery — fish is sourced fresh each morning, so the
     // earliest a customer can choose is tomorrow.
@@ -40,22 +37,21 @@ const Checkout = () => {
     useEffect(() => { if (selectedDate) axios.get(`/api/slots?date=${selectedDate}`).then(res => setSlots(res.data)); }, [selectedDate]);
 
     const handlePlaceOrder = async () => {
+        if (placing) return;
+        setPlacing(true);
         try {
-            const res = await axios.post('/api/orders', {
+            await axios.post('/api/orders', {
                 addressData: address,
                 deliverySlotId: selectedSlot.id,
                 items: cart.map(c => ({ fishId: c.id, quantity: c.quantity }))
             });
-            setOrderData(res.data);
-            setShowPayment(true);
-        } catch (err) { alert(err.response?.data?.error || 'Failed to place order'); }
-    };
-
-    const handleVerifyPayment = () => {
-        if(upiRef.length < 6) return alert('Enter valid UPI Reference Number');
-        alert('Payment Verified! Order Placed Successfully.');
-        clearCart();
-        navigate('/orders');
+            clearCart();
+            navigate('/orders');
+        } catch (err) {
+            alert(err.response?.data?.error || 'Failed to place order');
+        } finally {
+            setPlacing(false);
+        }
     };
 
     const totals = getTotals();
@@ -63,7 +59,7 @@ const Checkout = () => {
     return (
         <div className="container mx-auto p-6 max-w-4xl">
             <h2 className="text-2xl font-bold mb-6">Checkout</h2>
-            
+
             <div className="bg-white p-6 rounded-lg shadow-md mb-6">
                 <h3 className="text-xl font-semibold mb-4">Delivery Address</h3>
                 <div className="grid grid-cols-2 gap-4">
@@ -102,34 +98,14 @@ const Checkout = () => {
             )}
 
             <div className="bg-blue-50 p-6 rounded-lg shadow-md">
-                <div className="flex justify-between text-xl font-bold mb-4"><span>Total Payable:</span><span>₹{totals.total.toFixed(2)}</span></div>
+                <div className="flex justify-between text-xl font-bold mb-2"><span>Total Payable:</span><span>₹{totals.total.toFixed(2)}</span></div>
                 <div className="bg-white p-4 rounded mb-6 border border-blue-200">
-                    <p className="text-sm">Advance Payment Required (25%): <span className="font-bold text-blue-800">₹{totals.advance.toFixed(2)}</span></p>
-                    <p className="text-sm text-gray-600">Balance (Cash/UPI on Delivery): ₹{totals.balance.toFixed(2)}</p>
+                    <p className="text-sm text-gray-700">Pay the full amount via <span className="font-bold">Cash or UPI</span> when your order is delivered — no payment needed now.</p>
                 </div>
-                <button onClick={handlePlaceOrder} disabled={!selectedSlot || pincodeError !== ''} className="w-full bg-green-600 text-white py-3 rounded-lg font-bold disabled:bg-gray-400">
-                    Proceed to Pay ₹{totals.advance.toFixed(2)} Advance
+                <button onClick={handlePlaceOrder} disabled={!selectedSlot || pincodeError !== '' || placing} className="w-full bg-green-600 text-white py-3 rounded-lg font-bold disabled:bg-gray-400">
+                    {placing ? 'Placing Order...' : 'Place Order'}
                 </button>
             </div>
-
-            {showPayment && orderData && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white p-8 rounded-lg shadow-2xl max-w-sm w-full text-center">
-                        <h2 className="text-2xl font-bold mb-4 text-gray-800">Complete Advance Payment</h2>
-                        <p className="text-gray-600 mb-6">Scan the QR code with any UPI app to pay 25% advance.</p>
-                        <div className="bg-gray-100 p-4 rounded-lg mb-4 inline-block">
-                            <QRCodeSVG value={`upi://pay?pa=${orderData.upiId}&pn=Fishtokri&am=${orderData.advanceAmount}&cu=INR&tn=${orderData.order.orderNumber}`} size={200} />
-                        </div>
-                        <div className="mb-6">
-                            <p className="text-sm text-gray-500">UPI ID</p>
-                            <p className="font-bold text-lg text-blue-600">{orderData.upiId}</p>
-                            <p className="font-bold text-2xl text-green-600 mt-2">₹{orderData.advanceAmount}</p>
-                        </div>
-                        <input type="text" placeholder="Enter UPI Transaction Reference No." value={upiRef} onChange={e => setUpiRef(e.target.value)} className="w-full p-3 border rounded mb-4" />
-                        <button onClick={handleVerifyPayment} className="w-full bg-orange-500 text-white py-3 rounded font-bold">Verify Payment & Place Order</button>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

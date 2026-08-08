@@ -38,7 +38,7 @@ export const login = async (req, res) => {
     if (!user || !(await bcrypt.compare(password, user.password))) {
         return res.status(401).json({ error: 'Invalid credentials' });
     }
-    if (!user.isActive) return res.status(403).json({ error: 'Please verify your email first.' });
+    if (!user.isActive) return res.status(403).json({ error: user.isEmailVerified ? 'Your account has been deactivated. Please contact support.' : 'Please verify your email first.' });
 
     const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '30d' });
     res.json({ token, user: { id: user.id, name: `${user.firstName} ${user.lastName}`, role: user.role } });
@@ -117,4 +117,54 @@ export const updateUserRole = async (req, res) => {
 
     const user = await prisma.user.update({ where: { id: parseInt(id) }, data: { role } });
     res.json({ id: user.id, email: user.email, role: user.role });
+};
+
+export const updateUser = async (req, res) => {
+    const { id } = req.params;
+    const { firstName, lastName, email, mobile } = req.body;
+
+    if (email) {
+        const existing = await prisma.user.findUnique({ where: { email } });
+        if (existing && existing.id !== parseInt(id)) {
+            return res.status(400).json({ error: 'Another user already uses this email.' });
+        }
+    }
+
+    try {
+        const data = {};
+        if (firstName !== undefined) data.firstName = firstName;
+        if (lastName !== undefined) data.lastName = lastName;
+        if (email !== undefined) data.email = email;
+        if (mobile !== undefined) data.mobile = mobile;
+
+        const user = await prisma.user.update({ where: { id: parseInt(id) }, data });
+        res.json({ id: user.id, firstName: user.firstName, lastName: user.lastName, email: user.email, mobile: user.mobile });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to update user.' });
+    }
+};
+
+export const toggleUserActive = async (req, res) => {
+    const { id } = req.params;
+    const { isActive } = req.body;
+    try {
+        const user = await prisma.user.update({ where: { id: parseInt(id) }, data: { isActive: !!isActive } });
+        res.json({ id: user.id, isActive: user.isActive });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to update user.' });
+    }
+};
+
+export const deleteUser = async (req, res) => {
+    const { id } = req.params;
+    try {
+        await prisma.user.delete({ where: { id: parseInt(id) } });
+        res.json({ message: 'User permanently deleted.' });
+    } catch (err) {
+        // Users with existing orders/addresses can't be hard-deleted without
+        // breaking order history — deactivate instead in that case.
+        res.status(400).json({
+            error: 'This user has existing orders and cannot be permanently deleted (that would break order history). Deactivate the account instead.'
+        });
+    }
 };
