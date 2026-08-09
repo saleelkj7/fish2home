@@ -1,20 +1,18 @@
 import PDFDocument from 'pdfkit';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const invoicesDir = path.join(__dirname, '..', '..', 'invoices');
-
-export const generateInvoice = async (order) => {
+// Builds the invoice PDF entirely in memory and resolves with a Buffer.
+// Render's free tier wipes its filesystem on every redeploy/restart, so
+// invoices are generated on-demand each time they're requested rather
+// than saved to disk — that way they survive deploys indefinitely since
+// they're rebuilt fresh from the order data in the database every time.
+export const generateInvoiceBuffer = (order) => {
     return new Promise((resolve, reject) => {
-        fs.mkdirSync(invoicesDir, { recursive: true });
         const doc = new PDFDocument({ margin: 50 });
-        const fileName = `FTK-INV-${order.orderNumber}.pdf`;
-        const filePath = path.join(invoicesDir, fileName);
-        const stream = fs.createWriteStream(filePath);
+        const chunks = [];
+        doc.on('data', (chunk) => chunks.push(chunk));
+        doc.on('end', () => resolve(Buffer.concat(chunks)));
+        doc.on('error', reject);
 
-        doc.pipe(stream);
         doc.fontSize(25).text('Fishtokri', { align: 'right' });
         doc.fontSize(10).text('Fresh Fish Delivered to Your Doorstep', { align: 'right' });
         doc.moveDown(2);
@@ -51,7 +49,5 @@ export const generateInvoice = async (order) => {
         doc.text(`Amount Due (Cash/UPI at Delivery): ₹${order.balanceAmount}`, { color: 'red' });
 
         doc.end();
-        stream.on('finish', () => resolve(fileName));
-        stream.on('error', reject);
     });
 };

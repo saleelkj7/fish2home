@@ -26,6 +26,22 @@ const Orders = () => {
         return () => clearInterval(interval);
     }, [isAuthenticated, navigate]);
 
+    const downloadInvoice = async (order) => {
+        try {
+            const res = await axios.get(order.invoiceUrl, { responseType: 'blob' });
+            const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `INV-${order.orderNumber}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            alert('Failed to download invoice. Please try again.');
+        }
+    };
+
     return (
         <div className="container mx-auto p-6 max-w-4xl">
             <div className="flex justify-between items-center mb-6">
@@ -78,7 +94,7 @@ const Orders = () => {
                                 </div>
                                 <div className="text-right">
                                     <p className="font-bold text-lg">Total: ₹{order.totalAmount}</p>
-                                    {order.invoiceUrl && <a href={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${order.invoiceUrl}`} target="_blank" rel="noreferrer" className="text-teal-600 text-sm hover:underline">Download Invoice</a>}
+                                    {order.invoiceUrl && <button onClick={() => downloadInvoice(order)} className="text-teal-600 text-sm hover:underline">Download Invoice</button>}
                                 </div>
                             </div>
                             {qrOpenFor === order.id && !isPaid && (

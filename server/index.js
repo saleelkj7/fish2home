@@ -43,7 +43,6 @@ app.use(cors({
     credentials: true
 }));
 app.use(express.json());
-app.use('/invoices', express.static(path.join(__dirname, '..', 'invoices')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100 });

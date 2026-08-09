@@ -1,5 +1,5 @@
 import prisma from '../config/db.js';
-import { generateInvoice } from '../utils/invoiceGenerator.js';
+import { generateInvoiceBuffer } from '../utils/invoiceGenerator.js';
 
 const ALLOWED_PINCODES = ['400706', '400614', '400705'];
 
@@ -46,10 +46,35 @@ export const createOrder = async (req, res) => {
     }
     await prisma.deliverySlot.update({ where: { id: deliverySlotId }, data: { currentOrders: { increment: 1 } } });
 
-    const invoiceFileName = await generateInvoice(order);
-    await prisma.order.update({ where: { id: order.id }, data: { invoiceUrl: `/invoices/${invoiceFileName}` } });
+    const invoiceUrl = `/api/orders/${order.id}/invoice`;
+    await prisma.order.update({ where: { id: order.id }, data: { invoiceUrl } });
 
-    res.json({ order, invoiceUrl: `/invoices/${invoiceFileName}` });
+    res.json({ order, invoiceUrl });
+};
+
+export const getInvoice = async (req, res) => {
+    const { id } = req.params;
+    const order = await prisma.order.findUnique({
+        where: { id: parseInt(id) },
+        include: { items: { include: { fish: true } }, address: true }
+    });
+    if (!order) return res.status(404).json({ error: 'Order not found.' });
+
+    // Only the order's owner or an admin can download its invoice.
+    if (order.userId !== req.user.id && req.user.role !== 'ADMIN') {
+        return res.status(403).json({ error: 'Not authorized to view this invoice.' });
+    }
+
+    try {
+        const buffer = await generateInvoiceBuffer(order);
+        res.set({
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `attachment; filename="INV-${order.orderNumber}.pdf"`
+        });
+        res.send(buffer);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to generate invoice.' });
+    }
 };
 
 export const getMyOrders = async (req, res) => {
