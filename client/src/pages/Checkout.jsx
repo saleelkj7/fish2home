@@ -17,6 +17,7 @@ const Checkout = () => {
     const [slots, setSlots] = useState([]);
     const [selectedSlot, setSelectedSlot] = useState(null);
     const [placing, setPlacing] = useState(false);
+    const [placedOrder, setPlacedOrder] = useState(null);
 
     // No same-day delivery — fish is sourced fresh each morning, so the
     // earliest a customer can choose is tomorrow.
@@ -40,13 +41,13 @@ const Checkout = () => {
         if (placing) return;
         setPlacing(true);
         try {
-            await axios.post('/api/orders', {
+            const res = await axios.post('/api/orders', {
                 addressData: address,
                 deliverySlotId: selectedSlot.id,
                 items: cart.map(c => ({ fishId: c.id, quantity: c.quantity }))
             });
             clearCart();
-            navigate('/orders');
+            setPlacedOrder({ ...res.data.order, deliverySlot: selectedSlot });
         } catch (err) {
             alert(err.response?.data?.error || 'Failed to place order');
         } finally {
@@ -55,6 +56,56 @@ const Checkout = () => {
     };
 
     const totals = getTotals();
+
+    if (placedOrder) {
+        return (
+            <div className="container mx-auto p-6 max-w-2xl">
+                <div className="bg-white rounded-lg shadow-md overflow-hidden">
+                    <div className="bg-green-50 border-b border-green-100 p-8 text-center">
+                        <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                        </div>
+                        <h2 className="text-2xl font-bold text-slate-900">Order Placed Successfully!</h2>
+                        <p className="text-slate-600 mt-1">Order No: <span className="font-mono font-bold">{placedOrder.orderNumber}</span></p>
+                    </div>
+
+                    <div className="p-6">
+                        <div className="mb-6 pb-6 border-b border-slate-100">
+                            <h3 className="text-sm font-bold text-slate-500 uppercase mb-2">Delivery Date</h3>
+                            <p className="text-slate-900 font-semibold">
+                                {new Date(placedOrder.deliverySlot.date).toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                            </p>
+                            <p className="text-slate-600 text-sm">{placedOrder.deliverySlot.label}</p>
+                        </div>
+
+                        <div className="mb-6 pb-6 border-b border-slate-100">
+                            <h3 className="text-sm font-bold text-slate-500 uppercase mb-3">Items Ordered</h3>
+                            {placedOrder.items.map(item => (
+                                <div key={item.id} className="flex justify-between text-sm mb-2">
+                                    <span>{item.fish.name} × {item.quantity}kg</span>
+                                    <span className="font-semibold">₹{(item.price * item.quantity).toFixed(2)}</span>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="mb-6">
+                            <div className="flex justify-between text-lg font-bold text-slate-900">
+                                <span>Total Payable</span>
+                                <span>₹{placedOrder.totalAmount}</span>
+                            </div>
+                            <p className="text-sm text-amber-600 font-semibold mt-1">Pay via Cash or UPI when your order is delivered.</p>
+                        </div>
+
+                        <button onClick={() => navigate('/orders')} className="w-full bg-slate-900 text-white py-3 rounded-lg font-bold hover:bg-teal-600 transition-colors">
+                            View My Orders
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="container mx-auto p-6 max-w-4xl">
