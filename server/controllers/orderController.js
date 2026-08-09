@@ -116,3 +116,30 @@ export const updatePaymentStatus = async (req, res) => {
         res.status(500).json({ error: 'Failed to update payment status' });
     }
 };
+
+export const deleteOrder = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const order = await prisma.order.findUnique({
+            where: { id: parseInt(id) },
+            include: { items: true }
+        });
+        if (!order) return res.status(404).json({ error: 'Order not found.' });
+
+        // Restore stock for each item and free up the delivery slot capacity
+        // before deleting, so cancelling/removing an order doesn't silently
+        // strand inventory or slot counts.
+        for (const item of order.items) {
+            await prisma.fish.update({ where: { id: item.fishId }, data: { stock: { increment: item.quantity } } });
+        }
+        await prisma.deliverySlot.update({
+            where: { id: order.deliverySlotId },
+            data: { currentOrders: { decrement: 1 } }
+        }).catch(() => {}); // slot may already be at 0 or deleted separately — not fatal
+
+        await prisma.order.delete({ where: { id: parseInt(id) } }); // OrderItems cascade automatically
+        res.json({ message: 'Order deleted.' });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to delete order.' });
+    }
+};

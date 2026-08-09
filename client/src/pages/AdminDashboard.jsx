@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
@@ -52,6 +52,7 @@ const OrdersTab = () => {
     const [orders, setOrders] = useState([]);
     const [pendingStatuses, setPendingStatuses] = useState({});
     const [dateFilter, setDateFilter] = useState('ALL');
+    const [expandedOrderId, setExpandedOrderId] = useState(null);
 
     useEffect(() => { axios.get('/api/orders/all').then(res => setOrders(res.data)); }, []);
 
@@ -76,6 +77,32 @@ const OrdersTab = () => {
             setOrders(orders.map(o => o.id === id ? { ...o, paymentStatus: 'FULLY_PAID' } : o));
         } catch (err) {
             alert('Failed to update payment status');
+        }
+    };
+
+    const deleteOrder = async (order) => {
+        if (!confirm(`Delete order ${order.orderNumber}? This restores stock and cannot be undone.`)) return;
+        try {
+            await axios.delete(`/api/orders/${order.id}`);
+            setOrders(orders.filter(o => o.id !== order.id));
+        } catch (err) {
+            alert(err.response?.data?.error || 'Failed to delete order');
+        }
+    };
+
+    const downloadInvoice = async (order) => {
+        try {
+            const res = await axios.get(`/api/orders/${order.id}/invoice`, { responseType: 'blob' });
+            const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `INV-${order.orderNumber}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            alert('Failed to download invoice');
         }
     };
 
@@ -127,20 +154,28 @@ const OrdersTab = () => {
                             <tr>
                                 <th className="p-4">Order ID</th>
                                 <th className="p-4">Customer</th>
+                                <th className="p-4">Items</th>
                                 <th className="p-4">Delivery Date</th>
                                 <th className="p-4">Amount</th>
                                 <th className="p-4">Payment</th>
                                 <th className="p-4">Current Status</th>
                                 <th className="p-4">Update Status</th>
+                                <th className="p-4">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-200">
                             {filteredOrders.map(order => (
-                                <tr key={order.id} className="hover:bg-slate-50">
+                                <Fragment key={order.id}>
+                                <tr className="hover:bg-slate-50">
                                     <td className="p-4 font-mono text-xs">{order.orderNumber}</td>
                                     <td className="p-4">
                                         <div className="font-bold text-slate-900">{order.user.firstName}</div>
                                         <div className="text-slate-500 text-xs">{order.address.mobile}</div>
+                                    </td>
+                                    <td className="p-4">
+                                        <button onClick={() => setExpandedOrderId(expandedOrderId === order.id ? null : order.id)} className="text-teal-600 font-bold hover:underline text-xs">
+                                            {order.items.length} item{order.items.length !== 1 ? 's' : ''} {expandedOrderId === order.id ? '▲' : '▼'}
+                                        </button>
                                     </td>
                                     <td className="p-4 text-xs">
                                         {order.deliverySlot ? new Date(order.deliverySlot.date).toLocaleDateString('en-IN') : '—'}
@@ -181,10 +216,38 @@ const OrdersTab = () => {
                                             </button>
                                         </div>
                                     </td>
+                                    <td className="p-4">
+                                        <div className="flex flex-col gap-1.5">
+                                            <button onClick={() => downloadInvoice(order)} className="text-teal-600 font-bold hover:underline text-xs text-left">Invoice</button>
+                                            <button onClick={() => deleteOrder(order)} className="text-red-600 font-bold hover:underline text-xs text-left">Delete</button>
+                                        </div>
+                                    </td>
                                 </tr>
+                                {expandedOrderId === order.id && (
+                                    <tr className="bg-slate-50">
+                                        <td colSpan={9} className="p-4">
+                                            <div className="text-xs font-bold text-slate-500 uppercase mb-2">Order Items</div>
+                                            <table className="w-full text-sm">
+                                                <tbody>
+                                                    {order.items.map(item => (
+                                                        <tr key={item.id} className="border-b border-slate-200 last:border-0">
+                                                            <td className="py-1.5">{item.fish.name}</td>
+                                                            <td className="py-1.5 text-slate-500">{item.quantity}kg × ₹{item.price}</td>
+                                                            <td className="py-1.5 text-right font-semibold">₹{(item.price * item.quantity).toFixed(2)}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                            <div className="text-xs text-slate-500 mt-2">
+                                                Delivery address: {order.address.address}, {order.address.landmark ? `${order.address.landmark}, ` : ''}{order.address.pincode}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )}
+                                </Fragment>
                             ))}
                             {filteredOrders.length === 0 && (
-                                <tr><td colSpan={7} className="p-8 text-center text-slate-400">No orders for this filter.</td></tr>
+                                <tr><td colSpan={9} className="p-8 text-center text-slate-400">No orders for this filter.</td></tr>
                             )}
                         </tbody>
                     </table>

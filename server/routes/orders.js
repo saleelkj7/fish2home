@@ -1,5 +1,5 @@
 import express from 'express';
-import { createOrder, getMyOrders, updateOrderStatus, updatePaymentStatus, getInvoice } from '../controllers/orderController.js';
+import { createOrder, getMyOrders, updateOrderStatus, updatePaymentStatus, getInvoice, deleteOrder } from '../controllers/orderController.js';
 import { protect, admin } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -22,5 +22,6 @@ router.get('/all', protect, admin, async (req, res) => {
 
 router.put('/:id/status', protect, admin, updateOrderStatus);
 router.put('/:id/payment-status', protect, admin, updatePaymentStatus);
+router.delete('/:id', protect, admin, deleteOrder);
 
 export default router;

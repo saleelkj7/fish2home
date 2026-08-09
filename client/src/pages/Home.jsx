@@ -2,14 +2,6 @@ import { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { CartContext } from '../context/CartContext';
 
-const FISH_IMAGES = {
-    'Mackerel (Bangda)': '/images/fish/bangda.jpg',
-    'Surmai (King Fish)': '/images/fish/surmai.jpg',
-    'Pomfret (White)': '/images/fish/pomfret.jpg',
-    'Bombil (Bombay Duck)': '/images/fish/bombil.jpg',
-    'Mud Crab': '/images/fish/crab.jpg',
-    'Prawns (Medium)': '/images/fish/prawns.jpg'
-};
 const POPULAR = ['Mackerel (Bangda)', 'Mud Crab', 'Pomfret (White)', 'Surmai (King Fish)'];
 const NEW_ARRIVALS = ['Surmai (King Fish)', 'Bombil (Bombay Duck)'];
 
@@ -18,13 +10,31 @@ const weightOptions = (name) => (name.includes('Crab') ? [0.5, 1, 2] : name.incl
 
 const Home = () => {
     const [fishes, setFishes] = useState([]);
+    const [loadState, setLoadState] = useState('loading'); // 'loading' | 'ready' | 'error'
     const [tab, setTab] = useState('all');
     const [weights, setWeights] = useState({});
     const [checkPin, setCheckPin] = useState('');
     const [checkMsg, setCheckMsg] = useState(null);
     const { addToCart } = useContext(CartContext);
 
-    useEffect(() => { axios.get('/api/fishes').then(res => setFishes(res.data)).catch(() => {}); }, []);
+    const fetchFishes = async (attempt = 1) => {
+        try {
+            const res = await axios.get('/api/fishes', { timeout: 60000 });
+            setFishes(res.data);
+            setLoadState('ready');
+        } catch (err) {
+            // Render's free tier sleeps when idle, and Neon's database can
+            // also go cold — the very first request after a quiet period
+            // can fail while both wake up. Retry a few times before giving up.
+            if (attempt < 4) {
+                setTimeout(() => fetchFishes(attempt + 1), 4000);
+            } else {
+                setLoadState('error');
+            }
+        }
+    };
+
+    useEffect(() => { fetchFishes(); }, []);
 
     const filtered = fishes.filter(f =>
         tab === 'popular' ? POPULAR.includes(f.name) : tab === 'new' ? NEW_ARRIVALS.includes(f.name) : true
@@ -91,13 +101,26 @@ const Home = () => {
                     </div>
                 </div>
 
+                {loadState === 'loading' && (
+                    <div className="text-center py-16 text-slate-400">
+                        <div className="inline-block w-8 h-8 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mb-3"></div>
+                        <p>Loading today's catch — this can take up to a minute if the site's been quiet a while.</p>
+                    </div>
+                )}
+                {loadState === 'error' && (
+                    <div className="text-center py-16">
+                        <p className="text-slate-500 mb-4">Couldn't load today's catch right now.</p>
+                        <button onClick={() => { setLoadState('loading'); fetchFishes(); }} className="bg-slate-900 text-white px-5 py-2 rounded-full font-bold hover:bg-teal-600">Try Again</button>
+                    </div>
+                )}
+                {loadState === 'ready' && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {filtered.map(fish => {
                         const w = weights[fish.id] || null;
                         return (
                             <div key={fish.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all overflow-hidden flex flex-col">
                                 <div className="relative h-44 overflow-hidden">
-                                    <img src={FISH_IMAGES[fish.name]} alt={fish.name} className="w-full h-full object-cover" />
+                                    <img src={fish.image} alt={fish.name} className="w-full h-full object-cover" onError={(e) => { e.target.src = '/default-fish.jpg'; }} />
                                     <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
                                         <span className="bg-emerald-500 text-white text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full shadow">{fish.freshness || 'Fresh Today'}</span>
                                         {POPULAR.includes(fish.name) && <span className="bg-amber-400 text-slate-900 text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full shadow">Popular</span>}
@@ -129,6 +152,7 @@ const Home = () => {
                         );
                     })}
                 </div>
+                )}
             </section>
 
             {/* ============ DELIVERY CHECKER ============ */}
