@@ -56,7 +56,7 @@ export const getInvoice = async (req, res) => {
     const { id } = req.params;
     const order = await prisma.order.findUnique({
         where: { id: parseInt(id) },
-        include: { items: { include: { fish: true } }, address: true }
+        include: { items: { include: { fish: true } }, address: true, deliverySlot: true }
     });
     if (!order) return res.status(404).json({ error: 'Order not found.' });
 

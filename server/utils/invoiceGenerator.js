@@ -4,6 +4,27 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LOGO_PATH = path.join(__dirname, '..', 'assets', 'logo.png');
+const DEVANAGARI_FONT_PATH = path.join(__dirname, '..', 'assets', 'fonts', 'NotoSansDevanagari-Regular.ttf');
+
+// Standard PDF fonts (Helvetica etc.) only cover Latin script — any Hindi
+// or Marathi text a customer types into their address silently disappears
+// otherwise. Detect Devanagari characters and switch fonts automatically.
+const DEVANAGARI_REGEX = /[\u0900-\u097F]/;
+// A single line can mix scripts (e.g. a Marathi landmark name followed by
+// an English word like "station") — one font can't render both, so split
+// into consecutive same-script runs and render each with the matching
+// font, continuing on the same line via pdfkit's `continued` option.
+const renderMixedLine = (doc, text, x) => {
+    const segments = (text || '').match(/[\u0900-\u097F]+|[^\u0900-\u097F]+/g) || [text || ''];
+    segments.forEach((seg, i) => {
+        doc.font(DEVANAGARI_REGEX.test(seg) ? 'NotoDevanagari' : 'Helvetica');
+        if (i === 0) {
+            doc.text(seg, x, doc.y, { continued: segments.length > 1 });
+        } else {
+            doc.text(seg, { continued: i < segments.length - 1 });
+        }
+    });
+};
 
 // Fixed column x-positions for the items table, used consistently for
 // both the header row and every item row so everything lines up.
@@ -23,6 +44,7 @@ export const generateInvoiceBuffer = (order) => {
         doc.on('data', (chunk) => chunks.push(chunk));
         doc.on('end', () => resolve(Buffer.concat(chunks)));
         doc.on('error', reject);
+        doc.registerFont('NotoDevanagari', DEVANAGARI_FONT_PATH);
 
         // ---- Header: logo top-left, invoice title/meta top-right ----
         try {
@@ -40,17 +62,29 @@ export const generateInvoiceBuffer = (order) => {
             .text(`Date: ${new Date(order.createdAt).toLocaleDateString('en-IN')}`, { align: 'right' });
         doc.fillColor('#000');
 
-        doc.y = 130;
+        // Logo is drawn at y=45 with width 130 (~106pt tall at this
+        // logo's aspect ratio), so the divider line needs to clear well
+        // past that before it can be drawn without cutting through it.
+        doc.y = 175;
         doc.moveTo(50, doc.y).lineTo(PAGE_RIGHT, doc.y).strokeColor('#ddd').stroke();
-        doc.moveDown(1.5);
+        doc.moveDown(2.5); // blank line of breathing room before Bill To
 
         // ---- Bill To ----
-        doc.fontSize(11).font('Helvetica-Bold').text('Bill To');
-        doc.fontSize(10).font('Helvetica')
-            .text(order.address.name)
-            .text(order.address.address)
-            .text(`${order.address.landmark ? order.address.landmark + ', ' : ''}${order.address.pincode}`)
-            .text(`Phone: ${order.address.mobile}`);
+        const INDENT = 64; // a bit in from the page edge, not flush left
+        doc.fontSize(11).font('Helvetica-Bold').text('Bill To', INDENT);
+        doc.fontSize(10);
+        renderMixedLine(doc, order.address.name, INDENT);
+        renderMixedLine(doc, order.address.address, INDENT);
+        const landmarkLine = `${order.address.landmark ? order.address.landmark + ', ' : ''}${order.address.pincode}`;
+        renderMixedLine(doc, landmarkLine, INDENT);
+        doc.font('Helvetica').text(`Phone: ${order.address.mobile}`, INDENT);
+
+        if (order.deliverySlot) {
+            const slotDate = new Date(order.deliverySlot.date).toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            doc.moveDown(0.5);
+            doc.font('Helvetica-Bold').text('Delivery Date & Slot', INDENT);
+            doc.font('Helvetica').text(`${slotDate}, ${order.deliverySlot.startTime}:00 - ${order.deliverySlot.endTime}:00`, INDENT);
+        }
         doc.moveDown(1.5);
 
         // ---- Items table ----
@@ -77,8 +111,12 @@ export const generateInvoiceBuffer = (order) => {
         doc.y = rowY + 15;
 
         // ---- Summary (right-aligned block) ----
-        const gst = order.totalAmount * 0.05;
-        const subtotal = order.totalAmount - gst;
+        // order.totalAmount already includes GST (it was calculated at order
+        // time as subtotal + 5%), so back out the original split correctly
+        // instead of applying another 5% on top of an already-tax-inclusive
+        // total, which would silently overstate both GST and understate subtotal.
+        const subtotal = order.totalAmount / 1.05;
+        const gst = order.totalAmount - subtotal;
         const summaryLabelX = 300, summaryLabelWidth = 170, summaryValueX = 470, summaryWidth = 80;
 
         const summaryRow = (label, value, opts = {}) => {

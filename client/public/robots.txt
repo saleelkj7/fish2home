@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://fishtokri.co.in/sitemap.xml
