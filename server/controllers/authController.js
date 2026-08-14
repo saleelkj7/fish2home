@@ -1,11 +1,29 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import validator from 'validator';
 import prisma from '../config/db.js';
 import { sendVerificationEmail, sendResetPasswordEmail } from '../utils/emailService.js';
+import { validatePassword, PASSWORD_POLICY, sanitiseBody } from '../utils/security.js';
 
 export const register = async (req, res) => {
-    const { firstName, lastName, email, mobile, password } = req.body;
+    const raw = sanitiseBody(req.body);
+    const { firstName, lastName, email, mobile, password, consentGiven } = raw;
+
+    if (!firstName || !lastName || !email || !mobile || !password) {
+        return res.status(400).json({ error: 'All fields are required.' });
+    }
+    if (!validator.isEmail(email)) {
+        return res.status(400).json({ error: 'Please enter a valid email address.' });
+    }
+    if (!validatePassword(password)) {
+        return res.status(400).json({ error: PASSWORD_POLICY.message });
+    }
+    // DPDP Act compliance: explicit consent is required before creating an account.
+    if (!consentGiven) {
+        return res.status(400).json({ error: 'You must agree to the Privacy Policy and Terms of Service to register.' });
+    }
+
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) return res.status(400).json({ error: 'User already exists' });
 
@@ -61,8 +79,8 @@ export const forgotPassword = async (req, res) => {
 
 export const resetPassword = async (req, res) => {
     const { token, password } = req.body;
-    if (!token || !password || password.length < 8) {
-        return res.status(400).json({ error: 'A valid token and a password of at least 8 characters are required.' });
+    if (!token || !password || !validatePassword(password)) {
+        return res.status(400).json({ error: `A valid token and a valid password are required. ${PASSWORD_POLICY.message}` });
     }
     const user = await prisma.user.findFirst({ where: { resetToken: token, resetTokenExpiry: { gt: new Date() } } });
     if (!user) return res.status(400).json({ error: 'This reset link is invalid or has expired. Please request a new one.' });
@@ -166,5 +184,43 @@ export const deleteUser = async (req, res) => {
         res.status(400).json({
             error: 'This user has existing orders and cannot be permanently deleted (that would break order history). Deactivate the account instead.'
         });
+    }
+};
+
+// DPDP Act, 2023 — Right to Erasure: a logged-in customer can request
+// deletion of their own account. If they have existing orders we
+// anonymise their personal data rather than hard-deleting (to preserve
+// order history for legal/accounting purposes), then delete the account.
+export const deleteSelf = async (req, res) => {
+    const userId = req.user.id;
+    try {
+        // Anonymise any linked addresses so order history stays intact
+        // but personal contact details are removed.
+        await prisma.address.updateMany({
+            where: { userId },
+            data: { name: 'Deleted User', mobile: '0000000000', address: '[redacted]', landmark: '', pincode: '000000' }
+        });
+
+        try {
+            await prisma.user.delete({ where: { id: userId } });
+        } catch {
+            // If delete fails (e.g. DB constraint), anonymise in-place instead.
+            await prisma.user.update({
+                where: { id: userId },
+                data: {
+                    firstName: 'Deleted', lastName: 'User',
+                    email: `deleted-${userId}-${Date.now()}@fishtokri.co.in`,
+                    mobile: '0000000000',
+                    password: 'DELETED',
+                    isActive: false,
+                    verificationToken: null,
+                    resetToken: null,
+                    resetTokenExpiry: null
+                }
+            });
+        }
+        res.json({ message: 'Your account and personal data have been deleted. Thank you for using Fishtokri.' });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to delete account. Please email vaibhav@fishtokri.co.in to request manual deletion.' });
     }
 };

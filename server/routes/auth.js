@@ -3,7 +3,8 @@ import {
     register, login, verifyEmail,
     forgotPassword, resetPassword,
     listUsers, adminCreateUser, updateUserRole,
-    updateUser, toggleUserActive, deleteUser
+    updateUser, toggleUserActive, deleteUser,
+    deleteSelf
 } from '../controllers/authController.js';
 import { protect, admin } from '../middleware/auth.js';
 
@@ -15,6 +16,9 @@ router.post('/login', login);
 router.get('/verify-email', verifyEmail);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
+
+// Customer — DPDP right to erasure (self-initiated account deletion)
+router.delete('/me', protect, deleteSelf);
 
 // Admin — user management
 router.get('/users', protect, admin, listUsers);

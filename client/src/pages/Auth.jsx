@@ -3,9 +3,11 @@ import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
 
+const PASSWORD_HINT = 'Password must be 8–12 characters with at least one uppercase letter and one special character.';
+
 const Auth = () => {
     const [isLogin, setIsLogin] = useState(true);
-    const [form, setForm] = useState({ firstName: '', lastName: '', email: '', mobile: '', password: '' });
+    const [form, setForm] = useState({ firstName: '', lastName: '', email: '', mobile: '', password: '', consentGiven: false });
     const [msg, setMsg] = useState('');
     const [loading, setLoading] = useState(false);
     const { login } = useContext(AuthContext);
@@ -13,13 +15,12 @@ const Auth = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (loading) return; // guard against double-submit even if the click somehow slips through
+        if (loading) return;
         setMsg(''); setLoading(true);
         try {
             if (isLogin) {
                 const res = await axios.post('/api/auth/login', { email: form.email, password: form.password });
                 login(res.data.user, res.data.token);
-                // Redirect based on role
                 if (res.data.user.role === 'ADMIN') navigate('/admin');
                 else navigate('/');
             } else {
@@ -48,11 +49,26 @@ const Auth = () => {
                 )}
                 <input type="email" placeholder="Email" required value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="p-2 border rounded w-full" />
                 {!isLogin && <input type="text" placeholder="Mobile Number" required value={form.mobile} onChange={e => setForm({...form, mobile: e.target.value})} className="p-2 border rounded w-full" />}
-                <input type="password" placeholder="Password" required value={form.password} onChange={e => setForm({...form, password: e.target.value})} className="p-2 border rounded w-full" />
+                <div>
+                    <input type="password" placeholder="Password" required value={form.password} onChange={e => setForm({...form, password: e.target.value})} className="p-2 border rounded w-full" />
+                    {!isLogin && <p className="text-xs text-slate-400 mt-1">{PASSWORD_HINT}</p>}
+                </div>
                 {isLogin && (
                     <p className="text-right -mt-2">
                         <Link to="/forgot-password" className="text-xs text-teal-600 font-semibold hover:underline">Forgot password?</Link>
                     </p>
+                )}
+                {!isLogin && (
+                    <label className="flex items-start gap-2 text-xs text-slate-600 cursor-pointer">
+                        <input type="checkbox" required checked={form.consentGiven} onChange={e => setForm({...form, consentGiven: e.target.checked})} className="mt-0.5 flex-shrink-0" />
+                        <span>
+                            I agree to Fishtokri's{' '}
+                            <Link to="/privacy-policy" target="_blank" className="text-teal-600 font-semibold hover:underline">Privacy Policy</Link>
+                            {' '}and{' '}
+                            <Link to="/terms" target="_blank" className="text-teal-600 font-semibold hover:underline">Terms of Service</Link>.
+                            I consent to my personal data being processed as described therein, in accordance with India's DPDP Act, 2023.
+                        </span>
+                    </label>
                 )}
                 <button type="submit" disabled={loading} className="w-full bg-slate-900 text-white py-2 rounded hover:bg-teal-600 font-bold disabled:opacity-50 disabled:cursor-not-allowed">
                     {loading ? (isLogin ? 'Logging in...' : 'Registering...') : (isLogin ? 'Login' : 'Register')}

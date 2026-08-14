@@ -40,10 +40,8 @@ const Footer = () => (
             <div className="container mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-2 text-xs text-slate-500">
                 <span>© 2026 Fishtokri. All rights reserved. · Designed and Developed by Saleel K</span>
                 <span className="flex gap-4">
-                    <a href="#" className="hover:text-teal-400">About Us</a>
-                    <a href="#" className="hover:text-teal-400">FAQ</a>
-                    <a href="#" className="hover:text-teal-400">Terms & Conditions</a>
-                    <a href="#" className="hover:text-teal-400">Privacy Policy</a>
+                    <a href="/privacy-policy" className="hover:text-teal-400">Privacy Policy</a>
+                    <a href="/terms" className="hover:text-teal-400">Terms of Service</a>
                 </span>
             </div>
         </div>
