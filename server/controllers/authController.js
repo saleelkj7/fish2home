@@ -19,6 +19,11 @@ export const register = async (req, res) => {
     if (!validatePassword(password)) {
         return res.status(400).json({ error: PASSWORD_POLICY.message });
     }
+    // Hard cap at 72 chars (bcrypt's internal limit) to prevent a DoS
+    // where an attacker sends a massive password string to stall the CPU.
+    if (password.length > 72) {
+        return res.status(400).json({ error: PASSWORD_POLICY.message });
+    }
     // DPDP Act compliance: explicit consent is required before creating an account.
     if (!consentGiven) {
         return res.status(400).json({ error: 'You must agree to the Privacy Policy and Terms of Service to register.' });
@@ -52,13 +57,21 @@ export const verifyEmail = async (req, res) => {
 
 export const login = async (req, res) => {
     const { email, password } = req.body;
+    // Reject oversized passwords before hitting bcrypt to prevent DoS.
+    if (!password || typeof password !== 'string' || password.length > 72) {
+        return res.status(401).json({ error: 'Invalid credentials' });
+    }
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user || !(await bcrypt.compare(password, user.password))) {
         return res.status(401).json({ error: 'Invalid credentials' });
     }
     if (!user.isActive) return res.status(403).json({ error: user.isEmailVerified ? 'Your account has been deactivated. Please contact support.' : 'Please verify your email first.' });
 
-    const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '30d' });
+    const token = jwt.sign(
+        { id: user.id, role: user.role, tokenVersion: user.tokenVersion },
+        process.env.JWT_SECRET,
+        { expiresIn: '30d' }
+    );
     res.json({ token, user: { id: user.id, name: `${user.firstName} ${user.lastName}`, role: user.role } });
 };
 
@@ -92,8 +105,9 @@ export const resetPassword = async (req, res) => {
             password: hashedPassword,
             resetToken: null,
             resetTokenExpiry: null,
-            isEmailVerified: true, // successfully clicking the emailed link already proves ownership
-            isActive: true
+            isEmailVerified: true,
+            isActive: true,
+            tokenVersion: { increment: 1 } // invalidates all tokens issued before this reset
         }
     });
     res.json({ message: 'Password reset successful. You can now log in.' });

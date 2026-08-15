@@ -39,9 +39,11 @@ export const sendVerificationEmail = async (email, token) => {
         });
         console.log(`✅ Verification email sent to ${email}`);
     } catch (error) {
-        console.log(`\n⚠️ Email failed:`, error.message);
-        console.log(`🔗 VERIFY ACCOUNT MANUALLY BY OPENING THIS LINK IN YOUR BROWSER:`);
-        console.log(`👉 ${link}\n`);
+        console.log(`⚠️ Email delivery failed for ${email}:`, error.message);
+        // The verification link is logged only so admins can manually verify
+        // accounts during development/testing when SMTP isn't configured.
+        // In production, ensure RESEND_API_KEY is set so this never appears.
+        console.log(`🔗 Verification link (do not share): ${link}`);
     }
 };
 
@@ -55,8 +57,7 @@ export const sendResetPasswordEmail = async (email, token) => {
         });
         console.log(`✅ Password reset email sent to ${email}`);
     } catch (error) {
-        console.log(`\n⚠️ Email failed:`, error.message);
-        console.log(`🔗 RESET PASSWORD MANUALLY BY OPENING THIS LINK IN YOUR BROWSER:`);
-        console.log(`👉 ${link}\n`);
+        console.log(`⚠️ Email delivery failed for ${email}:`, error.message);
+        console.log(`🔗 Reset link (do not share): ${link}`);
     }
 };

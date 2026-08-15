@@ -46,6 +46,7 @@ model User {
   verificationToken String?
   resetToken        String?
   resetTokenExpiry  DateTime?
+  tokenVersion      Int       @default(0)
 }
 
 model Category {
