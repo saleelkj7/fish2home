@@ -19,6 +19,7 @@ import authRoutes from './routes/auth.js';
 import fishRoutes from './routes/fishes.js';
 import orderRoutes from './routes/orders.js';
 import slotRoutes from './routes/slots.js';
+import wishlistRoutes from './routes/wishlist.js';
 
 const app = express();
 
@@ -59,6 +60,7 @@ app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/fishes', fishRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/slots', slotRoutes);
+app.use('/api/wishlist', wishlistRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🐟 Fishtokri Server running on port ${PORT}`));

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { QRCodeSVG } from 'qrcode.react';
 import { AuthContext } from '../context/AuthContext';
+import { CartContext } from '../context/CartContext';
 
 const UPI_ID = 'vaibhav@icici';
 
@@ -10,7 +11,13 @@ const Orders = () => {
     const [orders, setOrders] = useState([]);
     const [qrOpenFor, setQrOpenFor] = useState(null);
     const { isAuthenticated } = useContext(AuthContext);
+    const { addToCart } = useContext(CartContext);
     const navigate = useNavigate();
+
+    const repeatOrder = (order) => {
+        order.items.forEach(item => addToCart({ ...item.fish, quantity: item.quantity }));
+        navigate('/cart');
+    };
 
     useEffect(() => {
         if (!isAuthenticated) { navigate('/login'); return; }
@@ -95,6 +102,7 @@ const Orders = () => {
                                 <div className="text-right">
                                     <p className="font-bold text-lg">Total: ₹{order.totalAmount}</p>
                                     {order.invoiceUrl && <button onClick={() => downloadInvoice(order)} className="text-teal-600 text-sm hover:underline">Download Invoice</button>}
+                                    <button onClick={() => repeatOrder(order)} className="text-slate-600 text-sm hover:underline font-semibold">🔁 Repeat Order</button>
                                 </div>
                             </div>
                             {qrOpenFor === order.id && !isPaid && (

@@ -22,6 +22,9 @@ const Navbar = () => {
                 <div className="hidden md:flex items-center gap-6 text-sm font-semibold text-slate-600">
                     <Link to="/" className="hover:text-teal-700">Home</Link>
                     {user?.role !== 'ADMIN' && (
+                        <Link to="/wishlist" className="hover:text-teal-700">Wishlist</Link>
+                    )}
+                    {user?.role !== 'ADMIN' && (
                         <Link to="/orders" className="hover:text-teal-700">My Orders</Link>
                     )}
                     {isAuthenticated && user?.role === 'ADMIN' && (
@@ -60,6 +63,9 @@ const Navbar = () => {
             {menuOpen && (
                 <div className="md:hidden border-t border-slate-200 bg-white px-6 py-4 flex flex-col gap-4 text-sm font-semibold text-slate-700">
                     <Link to="/" onClick={close} className="hover:text-teal-700">Home</Link>
+                    {user?.role !== 'ADMIN' && (
+                        <Link to="/wishlist" onClick={close} className="hover:text-teal-700">Wishlist</Link>
+                    )}
                     {user?.role !== 'ADMIN' && (
                         <Link to="/orders" onClick={close} className="hover:text-teal-700">My Orders</Link>
                     )}
