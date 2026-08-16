@@ -18,11 +18,18 @@ export const AuthProvider = ({ children }) => {
         }
     }, [token]);
 
-    const login = (userData, tokenStr) => {
+    const login = (userData, tokenStr, isFirstLogin = false) => {
         localStorage.setItem('f2h_token', tokenStr);
         localStorage.setItem('f2h_user', JSON.stringify(userData));
+        localStorage.setItem('f2h_first_login', isFirstLogin ? '1' : '0');
         setToken(tokenStr);
         setUser(userData);
+    };
+
+    const consumeFirstLogin = () => {
+        const val = localStorage.getItem('f2h_first_login') === '1';
+        localStorage.removeItem('f2h_first_login');
+        return val;
     };
 
     const logout = () => {
@@ -33,7 +40,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, token, login, logout, isAuthenticated: !!token }}>
+        <AuthContext.Provider value={{ user, token, login, logout, consumeFirstLogin, isAuthenticated: !!token }}>
             {children}
         </AuthContext.Provider>
     );

@@ -83,12 +83,16 @@ export const login = async (req, res) => {
 
     await prisma.loginLog.create({ data: { email, ip, success: true, userId: user.id } }).catch(() => {});
 
+    // Determine if this is the user's first ever successful login
+    const previousLogins = await prisma.loginLog.count({ where: { userId: user.id, success: true } });
+    const isFirstLogin = previousLogins <= 1; // <= 1 because we just created one above
+
     const token = jwt.sign(
         { id: user.id, role: user.role, tokenVersion: user.tokenVersion },
         process.env.JWT_SECRET,
         { expiresIn: '30d' }
     );
-    res.json({ token, user: { id: user.id, name: `${user.firstName} ${user.lastName}`, role: user.role } });
+    res.json({ token, isFirstLogin, user: { id: user.id, name: `${user.firstName} ${user.lastName}`, role: user.role } });
 };
 
 export const forgotPassword = async (req, res) => {

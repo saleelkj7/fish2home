@@ -20,7 +20,7 @@ const Auth = () => {
         try {
             if (isLogin) {
                 const res = await axios.post('/api/auth/login', { email: form.email, password: form.password });
-                login(res.data.user, res.data.token);
+                login(res.data.user, res.data.token, res.data.isFirstLogin);
                 if (res.data.user.role === 'ADMIN') navigate('/admin');
                 else navigate('/');
             } else {

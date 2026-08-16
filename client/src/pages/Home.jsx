@@ -18,7 +18,15 @@ const Home = () => {
     const [checkPin, setCheckPin] = useState('');
     const [checkMsg, setCheckMsg] = useState(null);
     const { addToCart } = useContext(CartContext);
-    const { isAuthenticated } = useContext(AuthContext);
+    const { isAuthenticated, consumeFirstLogin, user } = useContext(AuthContext);
+    const [welcome, setWelcome] = useState(null); // 'first' | 'returning' | null
+
+    useEffect(() => {
+        if (isAuthenticated && consumeFirstLogin !== undefined) {
+            const first = consumeFirstLogin();
+            if (first !== null) setWelcome(first ? 'first' : 'returning');
+        }
+    }, [isAuthenticated]);
     const [wishlist, setWishlist] = useState(new Set());
 
     useEffect(() => {
@@ -70,6 +78,17 @@ const Home = () => {
 
     return (
         <div className="bg-slate-50">
+            {/* Welcome banner — shown once per login, dismissed after 4 seconds */}
+            {welcome && (
+                <div className={`flex items-center justify-between px-6 py-3 text-sm font-semibold ${welcome === 'first' ? 'bg-teal-600 text-white' : 'bg-slate-800 text-white'}`}>
+                    <span>
+                        {welcome === 'first'
+                            ? `🎉 Welcome to Fishtokri, ${user?.name?.split(' ')[0]}! Great to have you here.`
+                            : `👋 Welcome back, ${user?.name?.split(' ')[0]}! Ready to order?`}
+                    </span>
+                    <button onClick={() => setWelcome(null)} className="ml-4 text-white/70 hover:text-white text-lg leading-none">✕</button>
+                </div>
+            )}
             {/* ============ HERO ============ */}
             <section className="relative min-h-[520px] flex items-center"
                 style={{ backgroundImage: 'url(/images/hero-bg.png)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
