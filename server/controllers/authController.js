@@ -57,15 +57,31 @@ export const verifyEmail = async (req, res) => {
 
 export const login = async (req, res) => {
     const { email, password } = req.body;
-    // Reject oversized passwords before hitting bcrypt to prevent DoS.
+    const ip = req.ip || req.connection?.remoteAddress || 'unknown';
+
     if (!password || typeof password !== 'string' || password.length > 72) {
+        await prisma.loginLog.create({ data: { email: email || '', ip, success: false, reason: 'Invalid password format' } }).catch(() => {});
         return res.status(401).json({ error: 'Invalid credentials' });
     }
+
     const user = await prisma.user.findUnique({ where: { email } });
+
     if (!user || !(await bcrypt.compare(password, user.password))) {
+        await prisma.loginLog.create({ data: { email: email || '', ip, success: false, reason: 'Invalid credentials', userId: user?.id || null } }).catch(() => {});
         return res.status(401).json({ error: 'Invalid credentials' });
     }
-    if (!user.isActive) return res.status(403).json({ error: user.isEmailVerified ? 'Your account has been deactivated. Please contact support.' : 'Please verify your email first.' });
+
+    if (user.isBlacklisted) {
+        await prisma.loginLog.create({ data: { email, ip, success: false, reason: 'Blacklisted', userId: user.id } }).catch(() => {});
+        return res.status(403).json({ error: `Your account has been suspended. Reason: ${user.blacklistReason || 'Contact support at vaibhav@fishtokri.co.in'}` });
+    }
+
+    if (!user.isActive) {
+        await prisma.loginLog.create({ data: { email, ip, success: false, reason: 'Inactive', userId: user.id } }).catch(() => {});
+        return res.status(403).json({ error: user.isEmailVerified ? 'Your account has been deactivated. Please contact support.' : 'Please verify your email first.' });
+    }
+
+    await prisma.loginLog.create({ data: { email, ip, success: true, userId: user.id } }).catch(() => {});
 
     const token = jwt.sign(
         { id: user.id, role: user.role, tokenVersion: user.tokenVersion },
@@ -117,7 +133,7 @@ export const resetPassword = async (req, res) => {
 
 export const listUsers = async (req, res) => {
     const users = await prisma.user.findMany({
-        select: { id: true, firstName: true, lastName: true, email: true, mobile: true, role: true, isActive: true, isEmailVerified: true, createdAt: true },
+        select: { id: true, firstName: true, lastName: true, email: true, mobile: true, role: true, isActive: true, isEmailVerified: true, isBlacklisted: true, blacklistReason: true, blacklistedAt: true, createdAt: true },
         orderBy: { createdAt: 'desc' }
     });
     res.json(users);
@@ -237,4 +253,40 @@ export const deleteSelf = async (req, res) => {
     } catch (err) {
         res.status(500).json({ error: 'Failed to delete account. Please email vaibhav@fishtokri.co.in to request manual deletion.' });
     }
+};
+
+export const blacklistUser = async (req, res) => {
+    const { id } = req.params;
+    const { reason } = req.body;
+    try {
+        const user = await prisma.user.update({
+            where: { id: parseInt(id) },
+            data: { isBlacklisted: true, blacklistReason: reason || 'No reason provided', blacklistedAt: new Date(), isActive: false, tokenVersion: { increment: 1 } }
+        });
+        res.json({ id: user.id, isBlacklisted: user.isBlacklisted, blacklistReason: user.blacklistReason });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to blacklist user.' });
+    }
+};
+
+export const unblacklistUser = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const user = await prisma.user.update({
+            where: { id: parseInt(id) },
+            data: { isBlacklisted: false, blacklistReason: null, blacklistedAt: null, isActive: true }
+        });
+        res.json({ id: user.id, isBlacklisted: user.isBlacklisted });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to remove blacklist.' });
+    }
+};
+
+export const getLoginLogs = async (req, res) => {
+    const logs = await prisma.loginLog.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: 200,
+        include: { user: { select: { firstName: true, lastName: true } } }
+    });
+    res.json(logs);
 };

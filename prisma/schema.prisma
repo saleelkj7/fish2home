@@ -47,6 +47,21 @@ model User {
   resetToken        String?
   resetTokenExpiry  DateTime?
   tokenVersion      Int       @default(0)
+  isBlacklisted     Boolean   @default(false)
+  blacklistReason   String?
+  blacklistedAt     DateTime?
+  loginLogs         LoginLog[]
+}
+
+model LoginLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  email     String
+  ip        String
+  success   Boolean
+  reason    String?
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 }
 
 model Category {

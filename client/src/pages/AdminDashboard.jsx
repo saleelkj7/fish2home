@@ -31,7 +31,8 @@ const AdminDashboard = () => {
                 {[
                     { id: 'orders', label: 'Orders' },
                     { id: 'fish', label: 'Fish Management' },
-                    { id: 'users', label: 'User Management' }
+                    { id: 'users', label: 'User Management' },
+                    { id: 'logs', label: 'IP Login Logs' }
                 ].map(t => (
                     <button key={t.id} onClick={() => setTab(t.id)}
                         className={`px-5 py-3 font-bold text-sm border-b-2 transition-colors ${tab === t.id ? 'border-teal-600 text-teal-700' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>
@@ -43,6 +44,7 @@ const AdminDashboard = () => {
             {tab === 'orders' && <OrdersTab />}
             {tab === 'fish' && <FishTab />}
             {tab === 'users' && <UsersTab />}
+            {tab === 'logs' && <IPLogsTab />}
         </div>
     );
 };
@@ -475,6 +477,23 @@ const UsersTab = () => {
         } catch { alert('Failed to update account status'); }
     };
 
+    const blacklist = async (u) => {
+        const reason = prompt(`Reason for blacklisting ${u.email}:`);
+        if (reason === null) return; // cancelled
+        try {
+            await axios.put(`/api/auth/users/${u.id}/blacklist`, { reason });
+            load();
+        } catch { alert('Failed to blacklist user'); }
+    };
+
+    const unblacklist = async (u) => {
+        if (!confirm(`Remove blacklist from ${u.email}?`)) return;
+        try {
+            await axios.put(`/api/auth/users/${u.id}/unblacklist`);
+            load();
+        } catch { alert('Failed to remove blacklist'); }
+    };
+
     const deleteUserRow = async (u) => {
         if (!confirm(`Permanently delete ${u.email}? This only works if they have no order history.`)) return;
         try {
@@ -566,9 +585,10 @@ const UsersTab = () => {
                                                 <span className={`px-2 py-1 rounded-full text-xs font-bold ${u.role === 'ADMIN' ? 'bg-purple-100 text-purple-800' : 'bg-slate-100 text-slate-700'}`}>{u.role}</span>
                                             </td>
                                             <td className="p-4">
-                                                <span className={`px-2 py-1 rounded-full text-xs font-bold ${u.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                                    {u.isActive ? 'Active' : 'Deactivated'}
+                                                <span className={`px-2 py-1 rounded-full text-xs font-bold ${u.isBlacklisted ? 'bg-red-900 text-white' : u.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                    {u.isBlacklisted ? 'Blacklisted' : u.isActive ? 'Active' : 'Deactivated'}
                                                 </span>
+                                                {u.isBlacklisted && u.blacklistReason && <div className="text-xs text-slate-400 mt-1">{u.blacklistReason}</div>}
                                             </td>
                                             <td className="p-4">
                                                 <div className="flex flex-wrap gap-2">
@@ -579,6 +599,11 @@ const UsersTab = () => {
                                                     <button onClick={() => toggleActive(u)} className="text-amber-600 font-bold hover:underline text-xs">
                                                         {u.isActive ? 'Deactivate' : 'Reactivate'}
                                                     </button>
+                                                    {u.isBlacklisted ? (
+                                                        <button onClick={() => unblacklist(u)} className="text-green-600 font-bold hover:underline text-xs">Unblacklist</button>
+                                                    ) : (
+                                                        <button onClick={() => blacklist(u)} className="text-red-800 font-bold hover:underline text-xs">Blacklist</button>
+                                                    )}
                                                     <button onClick={() => deleteUserRow(u)} className="text-red-600 font-bold hover:underline text-xs">Delete</button>
                                                 </div>
                                             </td>
@@ -586,6 +611,88 @@ const UsersTab = () => {
                                     )}
                                 </tr>
                             ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </>
+    );
+};
+
+// ==================== IP LOGIN LOGS TAB ====================
+const IPLogsTab = () => {
+    const [logs, setLogs] = useState([]);
+    const [ipFilter, setIpFilter] = useState('');
+
+    useEffect(() => { axios.get('/api/auth/login-logs').then(res => setLogs(res.data)); }, []);
+
+    const filtered = ipFilter ? logs.filter(l => l.ip.includes(ipFilter) || l.email.includes(ipFilter)) : logs;
+
+    const failsByIp = {};
+    logs.filter(l => !l.success).forEach(l => { failsByIp[l.ip] = (failsByIp[l.ip] || 0) + 1; });
+
+    return (
+        <>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <h3 className="text-slate-500 text-sm font-bold uppercase">Total Login Attempts</h3>
+                    <p className="text-3xl font-bold text-slate-900 mt-2">{logs.length}</p>
+                </div>
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <h3 className="text-slate-500 text-sm font-bold uppercase">Failed Attempts</h3>
+                    <p className="text-3xl font-bold text-red-600 mt-2">{logs.filter(l => !l.success).length}</p>
+                </div>
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <h3 className="text-slate-500 text-sm font-bold uppercase">Unique IPs</h3>
+                    <p className="text-3xl font-bold text-teal-600 mt-2">{new Set(logs.map(l => l.ip)).size}</p>
+                </div>
+            </div>
+
+            {Object.entries(failsByIp).filter(([, n]) => n >= 3).length > 0 && (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+                    <h3 className="font-bold text-red-800 mb-2">⚠️ Suspicious IPs (3+ failed attempts)</h3>
+                    <div className="flex flex-wrap gap-2">
+                        {Object.entries(failsByIp).filter(([, n]) => n >= 3).sort((a, b) => b[1] - a[1]).map(([ip, n]) => (
+                            <span key={ip} className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-mono font-bold">{ip} — {n} fails</span>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="p-6 border-b border-slate-200 bg-slate-50 flex flex-wrap gap-4 justify-between items-center">
+                    <h2 className="text-xl font-bold text-slate-900">Login Attempts (last 200)</h2>
+                    <input type="text" placeholder="Filter by IP or email..." value={ipFilter} onChange={e => setIpFilter(e.target.value)} className="p-2 border rounded text-sm w-64" />
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                        <thead className="bg-slate-50 text-slate-600 uppercase text-xs tracking-wider">
+                            <tr>
+                                <th className="p-4">Time</th>
+                                <th className="p-4">Email</th>
+                                <th className="p-4">IP Address</th>
+                                <th className="p-4">Result</th>
+                                <th className="p-4">Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200">
+                            {filtered.map(log => (
+                                <tr key={log.id} className={`${!log.success ? 'bg-red-50/40' : ''} hover:bg-slate-50`}>
+                                    <td className="p-4 text-xs text-slate-500">{new Date(log.createdAt).toLocaleString('en-IN')}</td>
+                                    <td className="p-4 text-xs">{log.email}</td>
+                                    <td className="p-4 font-mono text-xs">
+                                        {log.ip}
+                                        {failsByIp[log.ip] >= 3 && <span className="ml-1 text-red-500">⚠️</span>}
+                                    </td>
+                                    <td className="p-4">
+                                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${log.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                            {log.success ? 'Success' : 'Failed'}
+                                        </span>
+                                    </td>
+                                    <td className="p-4 text-xs text-slate-500">{log.reason || '—'}</td>
+                                </tr>
+                            ))}
+                            {filtered.length === 0 && <tr><td colSpan={5} className="p-8 text-center text-slate-400">No logs found.</td></tr>}
                         </tbody>
                     </table>
                 </div>
