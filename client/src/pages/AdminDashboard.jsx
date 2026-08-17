@@ -32,6 +32,7 @@ const AdminDashboard = () => {
                     { id: 'orders', label: 'Orders' },
                     { id: 'fish', label: 'Fish Management' },
                     { id: 'users', label: 'User Management' },
+                    { id: 'coupons', label: 'Coupons' },
                     { id: 'logs', label: 'IP Login Logs' }
                 ].map(t => (
                     <button key={t.id} onClick={() => setTab(t.id)}
@@ -44,6 +45,7 @@ const AdminDashboard = () => {
             {tab === 'orders' && <OrdersTab />}
             {tab === 'fish' && <FishTab />}
             {tab === 'users' && <UsersTab />}
+            {tab === 'coupons' && <CouponsTab />}
             {tab === 'logs' && <IPLogsTab />}
         </div>
     );
@@ -611,6 +613,143 @@ const UsersTab = () => {
                                     )}
                                 </tr>
                             ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </>
+    );
+};
+
+// ==================== COUPONS TAB ====================
+const emptyCouponForm = { code: '', discountPercentage: '', maxDiscountAmount: '', minOrderAmount: '', usageLimit: '', expiresAt: '' };
+
+const CouponsTab = () => {
+    const [coupons, setCoupons] = useState([]);
+    const [form, setForm] = useState(emptyCouponForm);
+    const [msg, setMsg] = useState('');
+    const [saving, setSaving] = useState(false);
+
+    const load = () => axios.get('/api/coupons').then(res => setCoupons(res.data));
+    useEffect(load, []);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setSaving(true); setMsg('');
+        try {
+            await axios.post('/api/coupons', form);
+            setMsg('✅ Coupon created.');
+            setForm(emptyCouponForm);
+            load();
+        } catch (err) {
+            setMsg('❌ ' + (err.response?.data?.error || 'Failed to create coupon.'));
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const toggle = async (coupon) => {
+        await axios.put(`/api/coupons/${coupon.id}/toggle`);
+        load();
+    };
+
+    const remove = async (coupon) => {
+        if (!confirm(`Delete coupon ${coupon.code}?`)) return;
+        await axios.delete(`/api/coupons/${coupon.id}`);
+        load();
+    };
+
+    return (
+        <>
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-8">
+                <h2 className="text-xl font-bold text-slate-900 mb-4">Create New Coupon</h2>
+                {msg && <p className="mb-4 text-sm font-semibold">{msg}</p>}
+                <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-xs font-bold text-slate-500 mb-1">Coupon Code *</label>
+                        <input type="text" placeholder="e.g. WELCOME20" required value={form.code}
+                            onChange={e => setForm({ ...form, code: e.target.value.toUpperCase() })}
+                            className="p-2 border rounded w-full font-mono uppercase" />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold text-slate-500 mb-1">Discount % *</label>
+                        <input type="number" placeholder="e.g. 20" min="1" max="100" required value={form.discountPercentage}
+                            onChange={e => setForm({ ...form, discountPercentage: e.target.value })}
+                            className="p-2 border rounded w-full" />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold text-slate-500 mb-1">Max Discount Amount (Rs.) <span className="font-normal text-slate-400">optional</span></label>
+                        <input type="number" placeholder="e.g. 100 (cap discount at ₹100)" value={form.maxDiscountAmount}
+                            onChange={e => setForm({ ...form, maxDiscountAmount: e.target.value })}
+                            className="p-2 border rounded w-full" />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold text-slate-500 mb-1">Min Order Amount (Rs.) <span className="font-normal text-slate-400">optional</span></label>
+                        <input type="number" placeholder="e.g. 500" value={form.minOrderAmount}
+                            onChange={e => setForm({ ...form, minOrderAmount: e.target.value })}
+                            className="p-2 border rounded w-full" />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold text-slate-500 mb-1">Usage Limit <span className="font-normal text-slate-400">optional, blank = unlimited</span></label>
+                        <input type="number" placeholder="e.g. 50" value={form.usageLimit}
+                            onChange={e => setForm({ ...form, usageLimit: e.target.value })}
+                            className="p-2 border rounded w-full" />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold text-slate-500 mb-1">Expiry Date <span className="font-normal text-slate-400">optional</span></label>
+                        <input type="date" value={form.expiresAt}
+                            onChange={e => setForm({ ...form, expiresAt: e.target.value })}
+                            className="p-2 border rounded w-full" />
+                    </div>
+                    <div className="md:col-span-2">
+                        <button type="submit" disabled={saving} className="bg-teal-600 text-white px-6 py-2 rounded font-bold hover:bg-teal-700 disabled:opacity-50">
+                            {saving ? 'Creating...' : 'Create Coupon'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="p-6 border-b border-slate-200 bg-slate-50">
+                    <h2 className="text-xl font-bold text-slate-900">All Coupons</h2>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                        <thead className="bg-slate-50 text-slate-600 uppercase text-xs tracking-wider">
+                            <tr>
+                                <th className="p-4">Code</th>
+                                <th className="p-4">Discount</th>
+                                <th className="p-4">Max Off</th>
+                                <th className="p-4">Min Order</th>
+                                <th className="p-4">Usage</th>
+                                <th className="p-4">Expires</th>
+                                <th className="p-4">Status</th>
+                                <th className="p-4">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200">
+                            {coupons.map(c => (
+                                <tr key={c.id} className="hover:bg-slate-50">
+                                    <td className="p-4 font-mono font-bold text-slate-900">{c.code}</td>
+                                    <td className="p-4 font-bold text-teal-600">{c.discountPercentage}%</td>
+                                    <td className="p-4 text-slate-500">{c.maxDiscountAmount ? `Rs. ${c.maxDiscountAmount}` : '—'}</td>
+                                    <td className="p-4 text-slate-500">{c.minOrderAmount ? `Rs. ${c.minOrderAmount}` : '—'}</td>
+                                    <td className="p-4">{c.usageCount}{c.usageLimit ? ` / ${c.usageLimit}` : ' / ∞'}</td>
+                                    <td className="p-4 text-xs text-slate-500">{c.expiresAt ? new Date(c.expiresAt).toLocaleDateString('en-IN') : '—'}</td>
+                                    <td className="p-4">
+                                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${c.isActive ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+                                            {c.isActive ? 'Active' : 'Inactive'}
+                                        </span>
+                                    </td>
+                                    <td className="p-4 flex gap-3">
+                                        <button onClick={() => toggle(c)} className="text-amber-600 font-bold hover:underline text-xs">
+                                            {c.isActive ? 'Deactivate' : 'Activate'}
+                                        </button>
+                                        <button onClick={() => remove(c)} className="text-red-600 font-bold hover:underline text-xs">Delete</button>
+                                    </td>
+                                </tr>
+                            ))}
+                            {coupons.length === 0 && <tr><td colSpan={8} className="p-8 text-center text-slate-400">No coupons yet.</td></tr>}
                         </tbody>
                     </table>
                 </div>

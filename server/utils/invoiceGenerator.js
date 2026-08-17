@@ -129,6 +129,9 @@ export const generateInvoiceBuffer = (order) => {
 
         summaryRow('Subtotal:', `Rs. ${subtotal.toFixed(2)}`);
         summaryRow('GST (5%):', `Rs. ${gst.toFixed(2)}`);
+        if (order.discountAmount > 0) {
+            summaryRow(`Coupon Discount:`, `- Rs. ${order.discountAmount.toFixed(2)}`, { color: '#16a34a' });
+        }
         doc.moveTo(summaryLabelX, doc.y).lineTo(PAGE_RIGHT, doc.y).strokeColor('#ddd').stroke();
         doc.moveDown(0.5);
         summaryRow('Grand Total:', `Rs. ${order.totalAmount}`, { bold: true });

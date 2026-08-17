@@ -4,7 +4,7 @@ import { generateInvoiceBuffer } from '../utils/invoiceGenerator.js';
 const ALLOWED_PINCODES = ['400706', '400614', '400705'];
 
 export const createOrder = async (req, res) => {
-    const { addressData, deliverySlotId, items } = req.body;
+    const { addressData, deliverySlotId, items, couponCode } = req.body;
     const userId = req.user.id;
 
     if (!ALLOWED_PINCODES.includes(addressData.pincode)) {
@@ -21,10 +21,26 @@ export const createOrder = async (req, res) => {
     }
 
     const gst = subtotal * 0.05;
-    const totalAmount = subtotal + gst;
-    // No advance payment — full amount is collected via cash or UPI at delivery.
-    const advanceAmount = 0;
+    let totalAmount = subtotal + gst;
+    let discountAmount = 0;
+    let appliedCouponId = null;
+
+    // Apply coupon if provided
+    if (couponCode) {
+        const coupon = await prisma.coupon.findUnique({ where: { code: couponCode.toUpperCase().trim() } });
+        if (coupon && coupon.isActive && (!coupon.expiresAt || new Date() <= new Date(coupon.expiresAt)) &&
+            (!coupon.usageLimit || coupon.usageCount < coupon.usageLimit) &&
+            (!coupon.minOrderAmount || totalAmount >= coupon.minOrderAmount)) {
+            const raw = (totalAmount * coupon.discountPercentage) / 100;
+            discountAmount = coupon.maxDiscountAmount ? Math.min(raw, coupon.maxDiscountAmount) : raw;
+            discountAmount = Math.round(discountAmount * 100) / 100;
+            totalAmount = Math.round((totalAmount - discountAmount) * 100) / 100;
+            appliedCouponId = coupon.id;
+        }
+    }
+
     const balanceAmount = totalAmount;
+    const advanceAmount = 0;
 
     const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
     const count = await prisma.order.count() + 1;
@@ -35,7 +51,7 @@ export const createOrder = async (req, res) => {
     const order = await prisma.order.create({
         data: {
             orderNumber, userId, addressId: address.id, deliverySlotId,
-            totalAmount, advanceAmount, balanceAmount,
+            totalAmount, discountAmount, advanceAmount, balanceAmount,
             items: { create: orderItems }
         },
         include: { items: { include: { fish: true } }, address: true }
@@ -46,10 +62,15 @@ export const createOrder = async (req, res) => {
     }
     await prisma.deliverySlot.update({ where: { id: deliverySlotId }, data: { currentOrders: { increment: 1 } } });
 
+    // Increment coupon usage count if one was applied
+    if (appliedCouponId) {
+        await prisma.coupon.update({ where: { id: appliedCouponId }, data: { usageCount: { increment: 1 } } });
+    }
+
     const invoiceUrl = `/api/orders/${order.id}/invoice`;
     await prisma.order.update({ where: { id: order.id }, data: { invoiceUrl } });
 
-    res.json({ order, invoiceUrl });
+    res.json({ order, invoiceUrl, discountAmount, couponCode: couponCode || null });
 };
 
 export const getInvoice = async (req, res) => {

@@ -120,6 +120,7 @@ model Order {
   deliverySlotId  Int
   deliverySlot    DeliverySlot  @relation(fields: [deliverySlotId], references: [id])
   totalAmount     Float
+  discountAmount  Float     @default(0)
   advanceAmount   Float
   balanceAmount   Float
   paymentStatus   PaymentStatus @default(PENDING_ADVANCE)
@@ -150,8 +151,14 @@ model Wishlist {
 }
 
 model Coupon {
-  id                 Int     @id @default(autoincrement())
-  code               String  @unique
+  id                 Int       @id @default(autoincrement())
+  code               String    @unique
   discountPercentage Float
-  isActive           Boolean @default(true)
+  maxDiscountAmount  Float?    // cap the rupee discount (e.g. max ₹100 off)
+  minOrderAmount     Float?    // minimum cart value to apply this coupon
+  usageLimit         Int?      // null = unlimited
+  usageCount         Int       @default(0)
+  expiresAt          DateTime?
+  isActive           Boolean   @default(true)
+  createdAt          DateTime  @default(now())
 }
