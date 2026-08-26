@@ -1,4 +1,5 @@
 import prisma from '../config/db.js';
+import { uploadImageToCloudinary } from '../utils/cloudinary.js';
 
 export const getFishes = async (req, res) => {
     const fishes = await prisma.fish.findMany({ include: { category: true }, orderBy: { id: 'asc' } });
@@ -27,7 +28,14 @@ export const createFish = async (req, res) => {
             catId = cat.id;
         }
 
-        const image = req.file ? `/uploads/fish/${req.file.filename}` : '/default-fish.jpg';
+        let image = '/default-fish.jpg';
+        if (req.file) {
+            try {
+                image = await uploadImageToCloudinary(req.file.buffer, req.file.mimetype);
+            } catch (uploadErr) {
+                return res.status(500).json({ error: `Image upload failed: ${uploadErr.message}` });
+            }
+        }
 
         const fish = await prisma.fish.create({
             data: {
@@ -61,7 +69,14 @@ export const updateFish = async (req, res) => {
         if (description !== undefined) data.description = description;
         if (freshness !== undefined) data.freshness = freshness;
         if (categoryId !== undefined) data.categoryId = parseInt(categoryId);
-        if (req.file) data.image = `/uploads/fish/${req.file.filename}`;
+
+        if (req.file) {
+            try {
+                data.image = await uploadImageToCloudinary(req.file.buffer, req.file.mimetype);
+            } catch (uploadErr) {
+                return res.status(500).json({ error: `Image upload failed: ${uploadErr.message}` });
+            }
+        }
 
         const fish = await prisma.fish.update({
             where: { id: parseInt(id) },

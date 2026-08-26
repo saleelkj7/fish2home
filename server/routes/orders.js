@@ -1,5 +1,5 @@
 import express from 'express';
-import { createOrder, getMyOrders, updateOrderStatus } from '../controllers/orderController.js';
+import { createOrder, getMyOrders, updateOrderStatus, updatePaymentStatus, getInvoice, deleteOrder } from '../controllers/orderController.js';
 import { protect, admin } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -7,6 +7,7 @@ const router = express.Router();
 // Customer Routes
 router.post('/', protect, createOrder);
 router.get('/my-orders', protect, getMyOrders);
+router.get('/:id/invoice', protect, getInvoice);
 
 // Admin Routes
 router.get('/all', protect, admin, async (req, res) => {
@@ -20,5 +21,7 @@ router.get('/all', protect, admin, async (req, res) => {
 });
 
 router.put('/:id/status', protect, admin, updateOrderStatus);
+router.put('/:id/payment-status', protect, admin, updatePaymentStatus);
+router.delete('/:id', protect, admin, deleteOrder);
 
 export default router;

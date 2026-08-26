@@ -1,19 +1,4 @@
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const uploadDir = path.join(__dirname, '..', 'uploads', 'fish');
-fs.mkdirSync(uploadDir, { recursive: true });
-
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, uploadDir),
-    filename: (req, file, cb) => {
-        const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-        cb(null, `fish-${unique}.jpg`);
-    }
-});
 
 const fileFilter = (req, file, cb) => {
     if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/jpg') {
@@ -23,11 +8,11 @@ const fileFilter = (req, file, cb) => {
     }
 };
 
-// NOTE: on Render's free tier the filesystem is ephemeral — uploaded
-// images will be lost on redeploy/restart. Fine for now; for permanent
-// storage this should eventually move to something like Cloudinary or S3.
+// Uses memory storage (buffer, not disk) so the image can be uploaded
+// straight to Cloudinary. Render's free tier wipes its own disk on every
+// redeploy, so anything saved locally there would be lost.
 export const uploadFishImage = multer({
-    storage,
+    storage: multer.memoryStorage(),
     fileFilter,
     limits: { fileSize: 5 * 1024 * 1024 } // 5MB
 });

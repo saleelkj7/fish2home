@@ -164,6 +164,13 @@ const Home = () => {
                                 <div className="relative h-44 overflow-hidden">
                                     <img src={fish.image} alt={fish.name} className="w-full h-full object-cover" onError={(e) => { e.target.src = '/default-fish.jpg'; }} />
                                     <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
+                                    {isAuthenticated && (
+                                        <button onClick={() => toggleWishlist(fish)} className="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-white/80 hover:bg-white shadow transition-colors" aria-label="Toggle wishlist">
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className={`w-5 h-5 ${wishlist.has(fish.id) ? 'fill-red-500 text-red-500' : 'fill-none text-slate-400'}`} stroke="currentColor" strokeWidth={2}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
+                                            </svg>
+                                        </button>
+                                    )}
                                         <span className="bg-emerald-500 text-white text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full shadow">{fish.freshness || 'Fresh Today'}</span>
                                         {POPULAR.includes(fish.name) && <span className="bg-amber-400 text-slate-900 text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full shadow">Popular</span>}
                                         {NEW_ARRIVALS.includes(fish.name) && <span className="bg-sky-500 text-white text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full shadow">New arrival</span>}

@@ -15,9 +15,10 @@ export const CartProvider = ({ children }) => {
     useEffect(() => { localStorage.setItem('f2h_cart', JSON.stringify(cart)); }, [cart]);
 
     const addToCart = (fish) => {
+        const qtyToAdd = fish.quantity || 1;
         const existing = cart.find(item => item.id === fish.id);
-        if (existing) setCart(cart.map(item => item.id === fish.id ? { ...item, quantity: item.quantity + 1 } : item));
-        else setCart([...cart, { ...fish, quantity: 1 }]);
+        if (existing) setCart(cart.map(item => item.id === fish.id ? { ...item, quantity: item.quantity + qtyToAdd } : item));
+        else setCart([...cart, { ...fish, quantity: qtyToAdd }]);
     };
 
     const updateQuantity = (fishId, qty) => {
@@ -31,7 +32,7 @@ export const CartProvider = ({ children }) => {
         const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
         const gst = subtotal * 0.05;
         const total = subtotal + gst;
-        return { subtotal, gst, total, advance: total * 0.25, balance: total * 0.75 };
+        return { subtotal, gst, total, advance: 0, balance: total };
     };
 
     return (

@@ -19,8 +19,14 @@ import authRoutes from './routes/auth.js';
 import fishRoutes from './routes/fishes.js';
 import orderRoutes from './routes/orders.js';
 import slotRoutes from './routes/slots.js';
+import wishlistRoutes from './routes/wishlist.js';
+import couponRoutes from './routes/coupons.js';
 
 const app = express();
+
+// Render (and most PaaS platforms) sit behind a reverse proxy that sets
+// X-Forwarded-For. Without this, express-rate-limit throws on every request.
+app.set('trust proxy', 1);
 
 app.use(helmet({ crossOriginResourcePolicy: false }));
 
@@ -38,17 +44,25 @@ app.use(cors({
     },
     credentials: true
 }));
-app.use(express.json());
-app.use('/invoices', express.static(path.join(__dirname, '..', 'invoices')));
+app.use(express.json({ limit: '2mb' })); // cap body size to block large-payload attacks
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// General: 100 req / 15 min
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100 });
 app.use(limiter);
 
-app.use('/api/auth', authRoutes);
+// Stricter on auth endpoints to resist brute-force: 10 attempts / 15 min
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, max: 10,
+    message: { error: 'Too many attempts. Please try again in 15 minutes.' }
+});
+
+app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/fishes', fishRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/slots', slotRoutes);
+app.use('/api/wishlist', wishlistRoutes);
+app.use('/api/coupons', couponRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🐟 Fishtokri Server running on port ${PORT}`));
