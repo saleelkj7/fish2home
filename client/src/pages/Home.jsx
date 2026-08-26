@@ -1,15 +1,9 @@
 import { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { CartContext } from '../context/CartContext';
+import { AuthContext } from '../context/AuthContext';
+import { Link } from 'react-router-dom';
 
-const FISH_IMAGES = {
-    'Mackerel (Bangda)': '/images/fish/bangda.jpg',
-    'Surmai (King Fish)': '/images/fish/surmai.jpg',
-    'Pomfret (White)': '/images/fish/pomfret.jpg',
-    'Bombil (Bombay Duck)': '/images/fish/bombil.jpg',
-    'Mud Crab': '/images/fish/crab.jpg',
-    'Prawns (Medium)': '/images/fish/prawns.jpg'
-};
 const POPULAR = ['Mackerel (Bangda)', 'Mud Crab', 'Pomfret (White)', 'Surmai (King Fish)'];
 const NEW_ARRIVALS = ['Surmai (King Fish)', 'Bombil (Bombay Duck)'];
 
@@ -18,13 +12,60 @@ const weightOptions = (name) => (name.includes('Crab') ? [0.5, 1, 2] : name.incl
 
 const Home = () => {
     const [fishes, setFishes] = useState([]);
+    const [loadState, setLoadState] = useState('loading'); // 'loading' | 'ready' | 'error'
     const [tab, setTab] = useState('all');
     const [weights, setWeights] = useState({});
     const [checkPin, setCheckPin] = useState('');
     const [checkMsg, setCheckMsg] = useState(null);
     const { addToCart } = useContext(CartContext);
+    const { isAuthenticated, consumeFirstLogin, user } = useContext(AuthContext);
+    const [welcome, setWelcome] = useState(null); // 'first' | 'returning' | null
 
-    useEffect(() => { axios.get('/api/fishes').then(res => setFishes(res.data)).catch(() => {}); }, []);
+    useEffect(() => {
+        if (isAuthenticated && consumeFirstLogin !== undefined) {
+            const first = consumeFirstLogin();
+            if (first !== null) setWelcome(first ? 'first' : 'returning');
+        }
+    }, [isAuthenticated]);
+    const [wishlist, setWishlist] = useState(new Set());
+
+    useEffect(() => {
+        if (isAuthenticated) {
+            axios.get('/api/wishlist').then(res => {
+                setWishlist(new Set(res.data.map(w => w.fishId)));
+            }).catch(() => {});
+        }
+    }, [isAuthenticated]);
+
+    const toggleWishlist = async (fish) => {
+        if (!isAuthenticated) return;
+        if (wishlist.has(fish.id)) {
+            await axios.delete(`/api/wishlist/${fish.id}`).catch(() => {});
+            setWishlist(prev => { const s = new Set(prev); s.delete(fish.id); return s; });
+        } else {
+            await axios.post('/api/wishlist', { fishId: fish.id }).catch(() => {});
+            setWishlist(prev => new Set([...prev, fish.id]));
+        }
+    };
+
+    const fetchFishes = async (attempt = 1) => {
+        try {
+            const res = await axios.get('/api/fishes', { timeout: 60000 });
+            setFishes(res.data);
+            setLoadState('ready');
+        } catch (err) {
+            // Render's free tier sleeps when idle, and Neon's database can
+            // also go cold — the very first request after a quiet period
+            // can fail while both wake up. Retry a few times before giving up.
+            if (attempt < 4) {
+                setTimeout(() => fetchFishes(attempt + 1), 4000);
+            } else {
+                setLoadState('error');
+            }
+        }
+    };
+
+    useEffect(() => { fetchFishes(); }, []);
 
     const filtered = fishes.filter(f =>
         tab === 'popular' ? POPULAR.includes(f.name) : tab === 'new' ? NEW_ARRIVALS.includes(f.name) : true
@@ -37,6 +78,17 @@ const Home = () => {
 
     return (
         <div className="bg-slate-50">
+            {/* Welcome banner — shown once per login, dismissed after 4 seconds */}
+            {welcome && (
+                <div className={`flex items-center justify-between px-6 py-3 text-sm font-semibold ${welcome === 'first' ? 'bg-teal-600 text-white' : 'bg-slate-800 text-white'}`}>
+                    <span>
+                        {welcome === 'first'
+                            ? `🎉 Welcome to Fishtokri, ${user?.name?.split(' ')[0]}! Great to have you here.`
+                            : `👋 Welcome back, ${user?.name?.split(' ')[0]}! Ready to order?`}
+                    </span>
+                    <button onClick={() => setWelcome(null)} className="ml-4 text-white/70 hover:text-white text-lg leading-none">✕</button>
+                </div>
+            )}
             {/* ============ HERO ============ */}
             <section className="relative min-h-[520px] flex items-center"
                 style={{ backgroundImage: 'url(/images/hero-bg.png)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
@@ -91,18 +143,38 @@ const Home = () => {
                     </div>
                 </div>
 
+                {loadState === 'loading' && (
+                    <div className="text-center py-16 text-slate-400">
+                        <div className="inline-block w-8 h-8 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mb-3"></div>
+                        <p>Loading today's catch — this can take up to a minute if the site's been quiet a while.</p>
+                    </div>
+                )}
+                {loadState === 'error' && (
+                    <div className="text-center py-16">
+                        <p className="text-slate-500 mb-4">Couldn't load today's catch right now.</p>
+                        <button onClick={() => { setLoadState('loading'); fetchFishes(); }} className="bg-slate-900 text-white px-5 py-2 rounded-full font-bold hover:bg-teal-600">Try Again</button>
+                    </div>
+                )}
+                {loadState === 'ready' && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {filtered.map(fish => {
                         const w = weights[fish.id] || null;
                         return (
                             <div key={fish.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all overflow-hidden flex flex-col">
                                 <div className="relative h-44 overflow-hidden">
-                                    <img src={FISH_IMAGES[fish.name]} alt={fish.name} className="w-full h-full object-cover" />
+                                    <img src={fish.image} alt={fish.name} className="w-full h-full object-cover" onError={(e) => { e.target.src = '/default-fish.jpg'; }} />
                                     <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
                                         <span className="bg-emerald-500 text-white text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full shadow">{fish.freshness || 'Fresh Today'}</span>
                                         {POPULAR.includes(fish.name) && <span className="bg-amber-400 text-slate-900 text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full shadow">Popular</span>}
                                         {NEW_ARRIVALS.includes(fish.name) && <span className="bg-sky-500 text-white text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full shadow">New arrival</span>}
                                     </div>
+                                    {isAuthenticated && (
+                                        <button onClick={() => toggleWishlist(fish)} className="absolute top-3 right-3 z-10 p-1.5 rounded-full bg-white/80 hover:bg-white shadow transition-colors" aria-label="Toggle wishlist">
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className={`w-5 h-5 ${wishlist.has(fish.id) ? 'fill-red-500 text-red-500' : 'fill-none text-slate-400'}`} stroke="currentColor" strokeWidth={2}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
+                                            </svg>
+                                        </button>
+                                    )}
                                 </div>
                                 <div className="p-5 flex flex-col flex-1">
                                     <div className="flex justify-between items-start gap-2 mb-2">
@@ -129,6 +201,7 @@ const Home = () => {
                         );
                     })}
                 </div>
+                )}
             </section>
 
             {/* ============ DELIVERY CHECKER ============ */}
