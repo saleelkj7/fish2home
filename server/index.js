@@ -37,10 +37,17 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173')
     .split(',')
     .map(o => o.trim());
 
+// Matches any Vercel preview deployment for this project automatically, e.g.
+// https://fishtokri-abc123xy-skcreations.vercel.app
+const vercelPreviewPattern = /^https:\/\/fishtokri(-[a-z0-9]+)*-skcreations\.vercel\.app$/;
+
 app.use(cors({
     origin: (origin, callback) => {
         // allow non-browser requests (curl, server-to-server) with no origin
-        if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.includes(origin) || vercelPreviewPattern.test(origin)) {
+            return callback(null, true);
+        }
         callback(new Error(`CORS blocked for origin: ${origin}`));
     },
     credentials: true
