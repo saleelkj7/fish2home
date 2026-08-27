@@ -4,6 +4,7 @@ import axios from 'axios';
 import { QRCodeSVG } from 'qrcode.react';
 import { AuthContext } from '../context/AuthContext';
 import { CartContext } from '../context/CartContext';
+import { SettingsContext } from '../context/SettingsContext';
 
 const UPI_ID = 'vaibhav@icici';
 
@@ -12,6 +13,7 @@ const Orders = () => {
     const [qrOpenFor, setQrOpenFor] = useState(null);
     const { isAuthenticated } = useContext(AuthContext);
     const { addToCart } = useContext(CartContext);
+    const { siteName } = useContext(SettingsContext);
     const navigate = useNavigate();
 
     const repeatOrder = (order) => {
@@ -108,7 +110,7 @@ const Orders = () => {
                             {qrOpenFor === order.id && !isPaid && (
                                 <div className="mt-4 pt-4 border-t text-center">
                                     <div className="bg-gray-50 p-4 rounded-lg inline-block">
-                                        <QRCodeSVG value={`upi://pay?pa=${UPI_ID}&pn=Fishtokri&am=${order.totalAmount}&cu=INR&tn=${order.orderNumber}`} size={180} />
+                                        <QRCodeSVG value={`upi://pay?pa=${UPI_ID}&pn=${encodeURIComponent(siteName)}&am=${order.totalAmount}&cu=INR&tn=${order.orderNumber}`} size={180} />
                                     </div>
                                     <p className="text-xs text-gray-500 mt-2">Scan with any UPI app · {UPI_ID}</p>
                                 </div>

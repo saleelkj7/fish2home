@@ -2,6 +2,7 @@ import { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
+import { SettingsContext } from '../context/SettingsContext';
 
 const PASSWORD_HINT = 'Password must be 8–12 characters with at least one uppercase letter and one special character.';
 
@@ -11,6 +12,7 @@ const Auth = () => {
     const [msg, setMsg] = useState('');
     const [loading, setLoading] = useState(false);
     const { login } = useContext(AuthContext);
+    const { siteName } = useContext(SettingsContext);
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
@@ -37,7 +39,7 @@ const Auth = () => {
 
     return (
         <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
-            <h2 className="text-2xl font-bold mb-2 text-center">{isLogin ? 'Login to Fishtokri' : 'Create Account'}</h2>
+            <h2 className="text-2xl font-bold mb-2 text-center">{isLogin ? `Login to ${siteName}` : 'Create Account'}</h2>
             <p className="text-xs text-slate-400 text-center mb-4">First request of the day may take up to a minute to respond — please wait rather than clicking again.</p>
             {msg && <p className={`p-3 mb-4 rounded text-center ${msg.includes('successful') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{msg}</p>}
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -62,7 +64,7 @@ const Auth = () => {
                     <label className="flex items-start gap-2 text-xs text-slate-600 cursor-pointer">
                         <input type="checkbox" required checked={form.consentGiven} onChange={e => setForm({...form, consentGiven: e.target.checked})} className="mt-0.5 flex-shrink-0" />
                         <span>
-                            I agree to Fishtokri's{' '}
+                            I agree to {siteName}'s{' '}
                             <Link to="/privacy-policy" target="_blank" className="text-teal-600 font-semibold hover:underline">Privacy Policy</Link>
                             {' '}and{' '}
                             <Link to="/terms" target="_blank" className="text-teal-600 font-semibold hover:underline">Terms of Service</Link>.

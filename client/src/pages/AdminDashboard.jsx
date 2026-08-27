@@ -2,6 +2,7 @@ import { useState, useEffect, useContext, Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
+import { SettingsContext } from '../context/SettingsContext';
 
 const STATUS_OPTIONS = ['PENDING', 'CONFIRMED', 'CLEANING', 'PACKED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED'];
 
@@ -33,7 +34,8 @@ const AdminDashboard = () => {
                     { id: 'fish', label: 'Fish Management' },
                     { id: 'users', label: 'User Management' },
                     { id: 'coupons', label: 'Coupons' },
-                    { id: 'logs', label: 'IP Login Logs' }
+                    { id: 'logs', label: 'IP Login Logs' },
+                    { id: 'settings', label: '⚙️ Site Settings' }
                 ].map(t => (
                     <button key={t.id} onClick={() => setTab(t.id)}
                         className={`px-5 py-3 font-bold text-sm border-b-2 transition-colors ${tab === t.id ? 'border-teal-600 text-teal-700' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>
@@ -47,6 +49,7 @@ const AdminDashboard = () => {
             {tab === 'users' && <UsersTab />}
             {tab === 'coupons' && <CouponsTab />}
             {tab === 'logs' && <IPLogsTab />}
+            {tab === 'settings' && <SettingsTab />}
         </div>
     );
 };
@@ -837,6 +840,98 @@ const IPLogsTab = () => {
                 </div>
             </div>
         </>
+    );
+};
+
+// ==================== SETTINGS TAB ====================
+const SettingsTab = () => {
+    const { siteName: currentName, logoUrl: currentLogo, refreshSettings } = useContext(SettingsContext);
+    const [siteName, setSiteName] = useState('');
+    const [logo, setLogo] = useState(null);
+    const [preview, setPreview] = useState(null);
+    const [msg, setMsg] = useState('');
+    const [saving, setSaving] = useState(false);
+
+    // Pre-fill from live context once it loads
+    useEffect(() => { setSiteName(currentName || ''); }, [currentName]);
+
+    const handleLogoChange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        setLogo(file);
+        setPreview(URL.createObjectURL(file));
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setSaving(true); setMsg('');
+        try {
+            const fd = new FormData();
+            if (siteName.trim()) fd.append('siteName', siteName.trim());
+            if (logo) fd.append('logo', logo);
+            const res = await axios.put('/api/settings', fd, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            refreshSettings(); // update context so Navbar/Footer reflect immediately
+            setMsg(`✅ Settings saved! Site name: "${res.data.siteName}"`);
+            setLogo(null);
+        } catch (err) {
+            setMsg('❌ ' + (err.response?.data?.error || 'Failed to save settings.'));
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 max-w-lg">
+            <h2 className="text-xl font-bold text-slate-900 mb-1">Site Settings</h2>
+            <p className="text-sm text-slate-500 mb-6">Changes reflect immediately across the website, invoices, and emails.</p>
+
+            {msg && <p className={`mb-4 text-sm font-semibold p-3 rounded ${msg.startsWith('✅') ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'}`}>{msg}</p>}
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Site name */}
+                <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">Business / Site Name</label>
+                    <input
+                        type="text"
+                        value={siteName}
+                        onChange={e => setSiteName(e.target.value)}
+                        placeholder="e.g. Fishtokri"
+                        className="w-full p-2 border rounded text-sm"
+                    />
+                    <p className="text-xs text-slate-400 mt-1">Appears in the navbar, footer, login page, invoices, and UPI QR code.</p>
+                </div>
+
+                {/* Logo upload */}
+                <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Logo (JPG or PNG)</label>
+                    <div className="flex items-center gap-4 mb-2">
+                        <img
+                            src={preview || currentLogo || '/images/logo.png'}
+                            alt="Current logo"
+                            className="h-14 w-auto rounded border border-slate-200 bg-slate-50 p-1 object-contain"
+                        />
+                        <span className="text-xs text-slate-400">{preview ? 'New logo preview' : 'Current logo'}</span>
+                    </div>
+                    <input
+                        type="file"
+                        accept="image/jpeg,image/jpg,image/png"
+                        onChange={handleLogoChange}
+                        className="text-sm"
+                    />
+                    <p className="text-xs text-slate-400 mt-1">Max 5 MB. Leave blank to keep the current logo. Upload to Cloudinary — reflected everywhere including invoices.</p>
+                </div>
+
+                <button
+                    type="submit"
+                    disabled={saving}
+                    className="bg-teal-600 text-white px-6 py-2 rounded font-bold hover:bg-teal-700 disabled:opacity-50 text-sm"
+                >
+                    {saving ? 'Saving...' : 'Save Settings'}
+                </button>
+            </form>
+        </div>
     );
 };
 

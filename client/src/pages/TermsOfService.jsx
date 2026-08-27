@@ -1,4 +1,9 @@
-const TermsOfService = () => (
+import { useContext } from 'react';
+import { SettingsContext } from '../context/SettingsContext';
+
+const TermsOfService = () => {
+    const { siteName } = useContext(SettingsContext);
+    return (
     <div className="container mx-auto px-6 py-10 max-w-3xl">
         <h1 className="text-3xl font-bold mb-2">Terms of Service</h1>
         <p className="text-sm text-slate-500 mb-8">Last updated: August 2026</p>
@@ -10,7 +15,7 @@ const TermsOfService = () => (
 
         <section className="mb-8">
             <h2 className="text-xl font-bold mb-3 text-slate-800">2. Service description</h2>
-            <p className="text-slate-600">Fishtokri provides an online ordering platform for fresh fish and seafood delivery in designated service areas of Navi Mumbai. Current delivery pincodes are 400706, 400614, and 400705. We reserve the right to change the service area at any time.</p>
+            <p className="text-slate-600">{siteName} provides an online ordering platform for fresh fish and seafood delivery in designated service areas of Navi Mumbai. Current delivery pincodes are 400706, 400614, and 400705. We reserve the right to change the service area at any time.</p>
         </section>
 
         <section className="mb-8">
@@ -35,7 +40,7 @@ const TermsOfService = () => (
 
         <section className="mb-8">
             <h2 className="text-xl font-bold mb-3 text-slate-800">6. Limitation of liability</h2>
-            <p className="text-slate-600">Fishtokri's liability is limited to the value of the order in question. We are not liable for indirect, incidental, or consequential damages arising from use of this service.</p>
+            <p className="text-slate-600">{siteName}'s liability is limited to the value of the order in question. We are not liable for indirect, incidental, or consequential damages arising from use of this service.</p>
         </section>
 
         <section className="mb-8">
@@ -48,5 +53,6 @@ const TermsOfService = () => (
             <p className="text-slate-600">For questions about these terms, contact us at <a href="mailto:vaibhav@fishtokri.co.in" className="text-teal-600 hover:underline">vaibhav@fishtokri.co.in</a>.</p>
         </section>
     </div>
-);
+    );
+};
 export default TermsOfService;

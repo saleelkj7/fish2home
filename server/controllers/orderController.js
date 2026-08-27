@@ -87,7 +87,11 @@ export const getInvoice = async (req, res) => {
     }
 
     try {
-        const buffer = await generateInvoiceBuffer(order);
+        const settings = await prisma.settings.findUnique({ where: { id: 1 } });
+        const buffer = await generateInvoiceBuffer(order, {
+            siteName: settings?.siteName,
+            logoUrl: settings?.logoUrl
+        });
         res.set({
             'Content-Type': 'application/pdf',
             'Content-Disposition': `attachment; filename="INV-${order.orderNumber}.pdf"`

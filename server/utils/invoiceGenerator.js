@@ -37,8 +37,9 @@ const PAGE_RIGHT = 550;
 // invoices are generated on-demand each time they're requested rather
 // than saved to disk — that way they survive deploys indefinitely since
 // they're rebuilt fresh from the order data in the database every time.
-export const generateInvoiceBuffer = (order) => {
-    return new Promise((resolve, reject) => {
+export const generateInvoiceBuffer = (order, settings = {}) => {
+    const siteName = settings.siteName || 'Fishtokri';
+    return new Promise(async (resolve, reject) => {
         const doc = new PDFDocument({ margin: 50 });
         const chunks = [];
         doc.on('data', (chunk) => chunks.push(chunk));
@@ -47,12 +48,22 @@ export const generateInvoiceBuffer = (order) => {
         doc.registerFont('NotoDevanagari', DEVANAGARI_FONT_PATH);
 
         // ---- Header: logo top-left, invoice title/meta top-right ----
+        // Prefer the admin-uploaded logo (a remote Cloudinary URL) if one
+        // is set; otherwise fall back to the bundled local asset, and
+        // finally to plain text if even that can't be loaded.
         try {
-            doc.image(LOGO_PATH, 50, 45, { width: 130 });
+            if (settings.logoUrl) {
+                const logoRes = await fetch(settings.logoUrl);
+                if (!logoRes.ok) throw new Error(`Logo fetch failed (${logoRes.status})`);
+                const logoBuffer = Buffer.from(await logoRes.arrayBuffer());
+                doc.image(logoBuffer, 50, 45, { width: 130 });
+            } else {
+                doc.image(LOGO_PATH, 50, 45, { width: 130 });
+            }
         } catch (e) {
             // If the logo can't be loaded for any reason, fall back to text
             // rather than failing the whole invoice.
-            doc.fontSize(20).font('Helvetica-Bold').text('Fishtokri', 50, 50);
+            doc.fontSize(20).font('Helvetica-Bold').text(siteName, 50, 50);
         }
 
         doc.fontSize(20).font('Helvetica-Bold').text('INVOICE', 0, 50, { align: 'right' });

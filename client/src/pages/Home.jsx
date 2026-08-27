@@ -2,6 +2,7 @@ import { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { CartContext } from '../context/CartContext';
 import { AuthContext } from '../context/AuthContext';
+import { SettingsContext } from '../context/SettingsContext';
 import { Link } from 'react-router-dom';
 
 const POPULAR = ['Mackerel (Bangda)', 'Mud Crab', 'Pomfret (White)', 'Surmai (King Fish)'];
@@ -19,6 +20,7 @@ const Home = () => {
     const [checkMsg, setCheckMsg] = useState(null);
     const { addToCart } = useContext(CartContext);
     const { isAuthenticated, consumeFirstLogin, user } = useContext(AuthContext);
+    const { siteName } = useContext(SettingsContext);
     const [welcome, setWelcome] = useState(null); // 'first' | 'returning' | null
 
     useEffect(() => {
@@ -83,7 +85,7 @@ const Home = () => {
                 <div className={`flex items-center justify-between px-6 py-3 text-sm font-semibold ${welcome === 'first' ? 'bg-teal-600 text-white' : 'bg-slate-800 text-white'}`}>
                     <span>
                         {welcome === 'first'
-                            ? `🎉 Welcome to Fishtokri, ${user?.name?.split(' ')[0]}! Great to have you here.`
+                            ? `🎉 Welcome to ${siteName}, ${user?.name?.split(' ')[0]}! Great to have you here.`
                             : `👋 Welcome back, ${user?.name?.split(' ')[0]}! Ready to order?`}
                     </span>
                     <button onClick={() => setWelcome(null)} className="ml-4 text-white/70 hover:text-white text-lg leading-none">✕</button>

@@ -2,7 +2,7 @@
 // Uses Cloudinary's unsigned upload API directly via fetch — no extra
 // npm dependency needed, and it's a normal HTTPS call so it isn't
 // affected by any outbound port restrictions.
-export const uploadImageToCloudinary = async (fileBuffer, mimeType) => {
+export const uploadImageToCloudinary = async (fileBuffer, mimeType, folder = 'fishtokri/fish') => {
     const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
     const uploadPreset = process.env.CLOUDINARY_UPLOAD_PRESET;
 
@@ -15,7 +15,7 @@ export const uploadImageToCloudinary = async (fileBuffer, mimeType) => {
     const formData = new FormData();
     formData.append('file', base64Data);
     formData.append('upload_preset', uploadPreset);
-    formData.append('folder', 'fishtokri/fish');
+    formData.append('folder', folder);
 
     const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
         method: 'POST',

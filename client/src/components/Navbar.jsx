@@ -2,10 +2,12 @@ import { useContext, useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { CartContext } from '../context/CartContext';
 import { AuthContext } from '../context/AuthContext';
+import { SettingsContext } from '../context/SettingsContext';
 
 const Navbar = () => {
     const { cart } = useContext(CartContext);
     const { user, isAuthenticated, logout } = useContext(AuthContext);
+    const { siteName, logoUrl } = useContext(SettingsContext);
     const [menuOpen, setMenuOpen] = useState(false);
     const [avatarOpen, setAvatarOpen] = useState(false);
     const avatarRef = useRef(null);
@@ -25,7 +27,7 @@ const Navbar = () => {
         <nav className="bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40">
             <div className="container mx-auto px-6 h-16 flex justify-between items-center">
                 <Link to="/" className="flex items-center gap-2" onClick={close}>
-                    <img src="/images/logo.png" alt="Fishtokri" className="h-14 w-auto py-1" />
+                    <img src={logoUrl || '/images/logo.png'} alt={siteName} className="h-14 w-auto py-1" />
                 </Link>
 
                 {/* Desktop nav */}

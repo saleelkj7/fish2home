@@ -1,11 +1,16 @@
-const PrivacyPolicy = () => (
+import { useContext } from 'react';
+import { SettingsContext } from '../context/SettingsContext';
+
+const PrivacyPolicy = () => {
+    const { siteName } = useContext(SettingsContext);
+    return (
     <div className="container mx-auto px-6 py-10 max-w-3xl">
         <h1 className="text-3xl font-bold mb-2">Privacy Policy</h1>
         <p className="text-sm text-slate-500 mb-8">Last updated: August 2026 · Effective under India's Digital Personal Data Protection (DPDP) Act, 2023</p>
 
         <section className="mb-8">
             <h2 className="text-xl font-bold mb-3 text-slate-800">1. Who we are</h2>
-            <p className="text-slate-600">Fishtokri (<strong>fishtokri.co.in</strong>) is a fish and seafood delivery service operated from Navi Mumbai, Maharashtra, India. We are the Data Fiduciary as defined under the DPDP Act, 2023. Contact: <a href="mailto:vaibhav@fishtokri.co.in" className="text-teal-600 hover:underline">vaibhav@fishtokri.co.in</a></p>
+            <p className="text-slate-600">{siteName} (<strong>fishtokri.co.in</strong>) is a fish and seafood delivery service operated from Navi Mumbai, Maharashtra, India. We are the Data Fiduciary as defined under the DPDP Act, 2023. Contact: <a href="mailto:vaibhav@fishtokri.co.in" className="text-teal-600 hover:underline">vaibhav@fishtokri.co.in</a></p>
         </section>
 
         <section className="mb-8">
@@ -92,5 +97,6 @@ const PrivacyPolicy = () => (
             <p className="text-slate-600">We may update this policy from time to time. Any material changes will be communicated via email. Continued use of the site after such notice constitutes acceptance of the updated policy.</p>
         </section>
     </div>
-);
+    );
+};
 export default PrivacyPolicy;

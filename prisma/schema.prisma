@@ -162,3 +162,12 @@ model Coupon {
   isActive           Boolean   @default(true)
   createdAt          DateTime  @default(now())
 }
+
+// Singleton row (always id = 1) holding site-wide branding, editable from
+// the admin panel and reflected across the website and generated invoices.
+model Settings {
+  id        Int      @id @default(1)
+  siteName  String   @default("Fishtokri")
+  logoUrl   String?
+  updatedAt DateTime @updatedAt
+}
